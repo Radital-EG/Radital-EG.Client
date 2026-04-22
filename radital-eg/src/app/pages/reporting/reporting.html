@@ -31,36 +31,31 @@
     
     <div class="viewer-section">
       
-      <div class="case-list-container" *ngIf="!selectedCase">
-        <h2 class="list-title">Pending Cases</h2>
-        <div class="case-grid">
-          <div class="case-box" *ngFor="let c of cases" (click)="viewCase(c)">
-            <div class="box-header">Case #{{ c.id }}</div>
-            <div class="box-label">{{ c.label }}</div>
-            <button class="view-link-btn">View Image</button>
-          </div>
+      <div class="modality-sidebar">
+        <div 
+          class="modality-box" 
+          *ngFor="let mod of currentCase.modalities"
+          [class.active]="selectedModality?.id === mod.id"
+          (click)="selectModality(mod)">
+          <img [src]="mod.imageUrl" alt="{{ mod.series }}" class="modality-thumbnail">
+          <span class="modality-label">{{ mod.series }}</span>
         </div>
       </div>
 
-      <div class="image-container" *ngIf="selectedCase">
-        <div class="viewer-controls">
-          <button class="back-btn" (click)="backToList()">← Back to Cases</button>
-          <span class="image-label">Viewing: {{ selectedCase.label }}</span>
+      <div class="image-container" *ngIf="selectedModality">
+        <div class="scan-info-overlay">
+          <p>PATIENT: {{ currentCase.patientName }}</p>
+          <p>STUDY: {{ selectedModality.description }}</p>
         </div>
-        <img [src]="selectedCase.imageUrl" alt="Patient Scan" class="medical-image" />
+        <img [src]="selectedModality.imageUrl" alt="Patient Scan" class="medical-image" />
       </div>
 
     </div>
 
     <div class="report-section">
-      
-      <div class="no-selection" *ngIf="!selectedCase">
-        <p>Select a case from the workspace to begin reporting.</p>
-      </div>
-
-      <div class="report-content" *ngIf="selectedCase">
+      <div class="report-content">
         <div class="case-header">
-          <h2>Case #{{ selectedCase.id }}</h2>
+          <h2>Case #{{ currentCase.caseId }}</h2>
           <p>DIAGNOSTIC REPORT V1.2</p>
         </div>
 
@@ -69,7 +64,7 @@
             <span class="icon">📋</span> CLINICAL HISTORY
           </h3>
           <div class="panel-content">
-            {{ selectedCase.history }}
+            {{ currentCase.history }}
           </div>
         </div>
 
@@ -88,7 +83,6 @@
           <button class="btn-primary" (click)="submitReport()">FINALIZE REPORT</button>
         </div>
       </div>
-
     </div>
 
   </div>

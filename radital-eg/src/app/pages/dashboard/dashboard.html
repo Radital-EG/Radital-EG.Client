@@ -1,0 +1,188 @@
+<!-- ── Top Navbar ──────────────────────────────────────── -->
+<header class="navbar">
+  <div class="navbar-left">
+    <span class="logo">Radital Studio</span>
+    <nav class="tabs">
+      <button class="tab" [class.active]="activeTab === 'caselist'" (click)="activeTab = 'caselist'">Case List</button>
+      <button class="tab" [class.active]="activeTab === 'worklist'" (click)="activeTab = 'worklist'">Worklist</button>
+    </nav>
+  </div>
+  <div class="navbar-center">
+    <div class="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" [(ngModel)]="searchQuery" placeholder="Search Patient..." />
+    </div>
+  </div>
+  <div class="navbar-right">
+    <button class="icon-btn" aria-label="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </button>
+    <button class="icon-btn" aria-label="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" aria-label="Profile">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+    </button>
+    <div class="avatar">DR</div>
+  </div>
+</header>
+
+<!-- ── Layout ──────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- ── Sidebar ────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <p class="filter-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+      </svg>
+      FILTER BY
+    </p>
+    <p class="filter-sub">Prioritize your workflow</p>
+
+    <div class="filter-section">
+      <p class="filter-section-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        MODALITY
+      </p>
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="filters.modality.MRI" />
+        <span class="checkmark"></span>
+        MRI
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="filters.modality.CTScans" />
+        <span class="checkmark"></span>
+        CT Scans
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="filters.modality.XRay" />
+        <span class="checkmark"></span>
+        X-Ray
+      </label>
+    </div>
+
+    <div class="filter-section">
+      <p class="filter-section-title">
+        PRIORITY
+        <span class="exclaim">!</span>
+      </p>
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="filters.priority.Urgent" />
+        <span class="checkmark urgent"></span>
+        Urgent
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="filters.priority.Standard" />
+        <span class="checkmark"></span>
+        Standard
+      </label>
+    </div>
+
+    <button class="btn-stat">
+      STAT CASES ({{ statCount }})
+    </button>
+  </aside>
+
+  <!-- ── Main Content ────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Case list</h1>
+        <p class="page-subtitle">MONITORING {{ filteredCases.length }} ACTIVE DIAGNOSTIC STREAMS</p>
+      </div>
+      <div class="view-toggle">
+        <button class="toggle-btn" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          GRID
+        </button>
+        <button class="toggle-btn" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          LIST
+        </button>
+      </div>
+    </div>
+
+    <!-- Case cards grid -->
+    <div class="cases-grid" [class.list-view]="viewMode === 'list'">
+      <div
+        *ngFor="let case of filteredCases"
+        class="case-card"
+        [class.stat-card]="case.isStat"
+        [class.critical]="case.action === 'OPEN CRITICAL STUDY'"
+      >
+        <!-- Card top -->
+        <div class="card-top">
+          <div class="modality-icon" [attr.data-modality]="case.modality">
+            {{ getModalityIcon(case.modality) }}
+          </div>
+          <div class="card-info">
+            <span class="case-number">{{ case.caseNumber }}</span>
+            <span class="patient-id">{{ case.patientId }}</span>
+          </div>
+          <span *ngIf="case.isStat" class="stat-badge">● STAT</span>
+        </div>
+
+        <!-- Card meta -->
+        <div class="card-meta">
+          <div class="meta-block">
+            <span class="meta-label">MODALITY</span>
+            <span class="meta-value" [class.modality-mri]="case.modality === 'MRI'" [class.modality-ct]="case.modality === 'CT Scan'" [class.modality-xray]="case.modality === 'X-Ray'">
+              {{ case.modality }}
+            </span>
+          </div>
+          <div class="meta-block">
+            <span class="meta-label">SUBMISSION</span>
+            <span class="meta-value">{{ case.submissionTime }}</span>
+          </div>
+        </div>
+
+        <!-- Card action -->
+        <button
+          class="card-action"
+          [class.action-critical]="case.action === 'OPEN CRITICAL STUDY'"
+          [class.action-review]="case.action === 'REVIEW SERIES'"
+          (click)="openCase(case)"
+        >
+          {{ case.action }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="filteredCases.length === 0" class="empty-state">
+      <p>No cases match your current filters.</p>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Notification Bar ────────────────────────────────── -->
+<div class="notification-bar" *ngIf="showNotification">
+  <div class="notif-icon">!</div>
+  <div class="notif-text">
+    <strong>New urgent MRI case received</strong>
+    <span>PATIENT ID: #1042 • TRAUMA CENTER • INCOMING</span>
+  </div>
+  <button class="btn-acknowledge" (click)="acknowledgeNotification()">ACKNOWLEDGE</button>
+</div>

@@ -1,0 +1,95 @@
+<div class="app-layout">
+  
+  <header class="top-navbar">
+    <div class="nav-left">
+      <h1 class="logo">Radital Studio</h1>
+      <span class="nav-link">Case List</span>
+      <span class="nav-link active">Worklist</span>
+    </div>
+    
+    <div class="nav-center">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Search Patient...">
+      </div>
+    </div>
+    
+    <div class="nav-right">
+      <button class="sign-report-btn">SIGN REPORT</button>
+    </div>
+  </header>
+
+  <div class="urgent-banner" *ngIf="bannerVisible">
+    <div class="banner-content">
+      <span class="warning-icon">!</span>
+      <span class="banner-text">URGENT: New STAT MRI Assignee - Patient ID #8829</span>
+    </div>
+    <button class="confirm-btn" (click)="confirmReceipt()">CONFIRM RECEIPT</button>
+  </div>
+
+  <div class="workspace-container">
+    
+    <div class="viewer-section">
+      
+      <div class="case-list-container" *ngIf="!selectedCase">
+        <h2 class="list-title">Pending Cases</h2>
+        <div class="case-grid">
+          <div class="case-box" *ngFor="let c of cases" (click)="viewCase(c)">
+            <div class="box-header">Case #{{ c.id }}</div>
+            <div class="box-label">{{ c.label }}</div>
+            <button class="view-link-btn">View Image</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="image-container" *ngIf="selectedCase">
+        <div class="viewer-controls">
+          <button class="back-btn" (click)="backToList()">← Back to Cases</button>
+          <span class="image-label">Viewing: {{ selectedCase.label }}</span>
+        </div>
+        <img [src]="selectedCase.imageUrl" alt="Patient Scan" class="medical-image" />
+      </div>
+
+    </div>
+
+    <div class="report-section">
+      
+      <div class="no-selection" *ngIf="!selectedCase">
+        <p>Select a case from the workspace to begin reporting.</p>
+      </div>
+
+      <div class="report-content" *ngIf="selectedCase">
+        <div class="case-header">
+          <h2>Case #{{ selectedCase.id }}</h2>
+          <p>DIAGNOSTIC REPORT V1.2</p>
+        </div>
+
+        <div class="history-panel">
+          <h3 class="section-title">
+            <span class="icon">📋</span> CLINICAL HISTORY
+          </h3>
+          <div class="panel-content">
+            {{ selectedCase.history }}
+          </div>
+        </div>
+
+        <div class="write-report-panel">
+          <h3 class="section-title">
+            <span class="icon">👁️</span> FINDINGS & IMPRESSION
+          </h3>
+          <textarea 
+            class="report-textarea" 
+            [(ngModel)]="reportText" 
+            placeholder="Type your findings and impression here..."></textarea>
+        </div>
+
+        <div class="actions-panel">
+          <button class="btn-secondary">SAVE DRAFT</button>
+          <button class="btn-primary" (click)="submitReport()">FINALIZE REPORT</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

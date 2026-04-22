@@ -1,0 +1,370 @@
+/* --- Global Layout --- */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* --- Top Navigation Bar --- */
+.top-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  height: 60px;
+  box-sizing: border-box;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  color: #0056b3;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  padding-right: 20px;
+}
+
+.nav-link {
+  color: #555;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-link.active {
+  color: #0056b3;
+  border-bottom: 2px solid #0056b3;
+  padding-bottom: 4px;
+}
+
+.nav-center .search-bar {
+  display: flex;
+  align-items: center;
+  background-color: #f0f2f5;
+  border-radius: 4px;
+  padding: 8px 16px;
+  width: 350px;
+}
+
+.search-bar input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.sign-report-btn {
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Urgent Banner --- */
+.urgent-banner {
+  background-color: #b30000;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.warning-icon {
+  background-color: white;
+  color: #b30000;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.confirm-btn {
+  background-color: white;
+  color: #b30000;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* --- Main Workspace --- */
+.workspace-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- Left Side: Viewer/List Section --- */
+.viewer-section {
+  flex: 1;
+  background-color: #050505;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto;
+}
+
+/* Case List Grid */
+.case-list-container {
+  padding: 40px;
+  color: white;
+}
+
+.list-title {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-weight: 400;
+}
+
+.case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.case-box {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.case-box:hover {
+  transform: translateY(-2px);
+  border-color: #0056b3;
+}
+
+.box-header {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.box-label {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.view-link-btn {
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Image Viewer */
+.image-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.viewer-controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 10;
+}
+
+.back-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.back-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.image-label {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.medical-image {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  background-color: #111;
+  border-radius: 16px;
+}
+
+/* --- Right Side: Report Section --- */
+.report-section {
+  width: 450px;
+  background-color: #ffffff;
+  border-left: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+}
+
+.no-selection {
+  padding: 40px;
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.report-content {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.case-header {
+  margin-bottom: 24px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
+}
+
+.case-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  color: #222;
+}
+
+.case-header p {
+  margin: 0;
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 1px;
+}
+
+.section-title {
+  font-size: 12px;
+  color: #0056b3;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-panel {
+  margin-bottom: 32px;
+}
+
+.panel-content {
+  background-color: #fdfdfd;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #444;
+}
+
+.write-report-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+}
+
+.report-textarea {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: 1px solid #cce0f5;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #222;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.report-textarea:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
+.actions-panel {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-secondary {
+  flex: 1;
+  background-color: white;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  flex: 2;
+  background-color: #0056b3;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #004494;
+}

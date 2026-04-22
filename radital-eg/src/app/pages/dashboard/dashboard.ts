@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 export interface CaseCard {
   id: number;
@@ -24,6 +25,34 @@ export class DashboardComponent {
   viewMode: 'grid' | 'list' = 'list';
   searchQuery: string = '';
   showNotification: boolean = true;
+  toastMessage: string = '';
+  toastType: 'autosave' | 'success' | '' = '';
+
+  constructor(private route: ActivatedRoute, private router: Router) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      let message = '';
+      let type: 'autosave' | 'success' | '' = '';
+
+      if (params['autosaved'] === 'true') {
+        message = 'Report autosaved';
+        type = 'autosave';
+      } else if (params['finalized'] === 'true') {
+        message = 'Report finalized & submitted';
+        type = 'success';
+      }
+
+      if (message) {
+        this.toastMessage = message;
+        this.toastType = type;
+        // Clear the query param from the URL without triggering navigation
+        this.router.navigate([], { queryParams: {}, replaceUrl: true });
+        // Auto-dismiss after 3.5 seconds
+        setTimeout(() => { this.toastMessage = ''; this.toastType = ''; }, 3500);
+      }
+    });
+  }
 
   // Sidebar filters
   filters = {
@@ -82,5 +111,9 @@ export class DashboardComponent {
 
   openCase(c: CaseCard): void {
     console.log('Opening case:', c.caseNumber);
+  }
+
+  goToWorklist(): void {
+    this.router.navigate(['/reporting']);
   }
 }

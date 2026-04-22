@@ -596,3 +596,45 @@
     display: none;
   }
 }
+
+/* ── Autosave Toast ─────────────────────────────────────── */
+.autosave-toast {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #1a1a2e;
+  color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  font-size: 13.5px;
+  font-weight: 600;
+  z-index: 300;
+  animation: toastIn 0.3s ease, toastOut 0.4s ease 2.6s forwards;
+}
+
+.autosave-toast svg {
+  color: #34d399;
+  flex-shrink: 0;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-10px); }
+}
+
+.autosave-toast.toast-success {
+  background: #064e3b;
+}
+
+.autosave-toast.toast-success svg {
+  color: #6ee7b7;
+}

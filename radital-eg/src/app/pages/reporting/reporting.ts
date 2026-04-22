@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 // Define the structure for an individual scan/modality
 interface Modality {
@@ -28,6 +29,9 @@ interface PatientCase {
 export class ReportingComponent implements OnInit {
   bannerVisible: boolean = true;
   reportText: string = '';
+  draftSaved: boolean = false;
+
+  constructor(private router: Router) {}
 
   // The single case assigned to the radiologist
   currentCase!: PatientCase;
@@ -76,11 +80,22 @@ export class ReportingComponent implements OnInit {
     this.selectedModality = modality;
   }
 
+  saveDraft() {
+    this.draftSaved = true;
+    setTimeout(() => { this.draftSaved = false; }, 2500);
+  }
+
   submitReport() {
     if (!this.reportText.trim()) {
       alert('Please write a report before finalizing.');
       return;
     }
-    alert(`Report for Case #${this.currentCase.caseId} finalized and submitted!`);
+    // Navigate to dashboard and signal report was finalized
+    this.router.navigate(['/dashboard'], { queryParams: { finalized: 'true' } });
+  }
+
+  goToCaseList() {
+    // Navigate back to dashboard and signal that the report was autosaved
+    this.router.navigate(['/dashboard'], { queryParams: { autosaved: 'true' } });
   }
 }

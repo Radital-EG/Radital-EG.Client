@@ -1,0 +1,97 @@
+<div class="app-layout">
+
+  <!-- Top Bar -->
+  <header class="top-navbar">
+
+    <h1 class="logo">RADITAL STUDIO</h1>
+
+    <div class="nav-actions">
+      <button class="btn-secondary">Dashboard</button>
+      <button class="btn-secondary">Requests</button>
+    </div>
+
+    <div class="top-buttons">
+      <button class="btn-danger">Delete</button>
+      <button class="btn-secondary">Save Draft</button>
+      <button class="btn-primary">Submit Request</button>
+    </div>
+
+  </header>
+
+  <!-- Main -->
+  <div class="workspace">
+
+    <!-- LEFT -->
+    <div class="form-section">
+
+      <h2 class="title">New Imaging Request</h2>
+
+      <div class="form-card">
+
+        <label>Patient Name</label>
+        <input [(ngModel)]="model.patientName" />
+
+        <label>Age</label>
+        <input type="number" [(ngModel)]="model.age" />
+
+        <label>Gender</label>
+        <select [(ngModel)]="model.gender">
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
+
+        <label>Patient ID</label>
+        <input [(ngModel)]="model.patientId" />
+
+        <label>Scan Type</label>
+        <select [(ngModel)]="model.scanType">
+          <option>CT</option>
+          <option>MRI</option>
+          <option>X-Ray</option>
+          <option>Ultrasound</option>
+        </select>
+
+        <label>Clinical Notes</label>
+        <textarea [(ngModel)]="model.notes"></textarea>
+
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" (click)="reset()">Reset</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+<div class="preview-section">
+
+  <div class="preview-card">
+    <h3>Request Preview</h3>
+    <p><b>Name:</b> {{model.patientName}}</p>
+    <p><b>ID:</b> {{model.patientId}}</p>
+    <p><b>Scan:</b> {{model.scanType}}</p>
+    <p><b>Notes:</b> {{model.notes}}</p>
+  </div>
+
+  <div class="preview-card upload-card">
+    <h3>Scan Image</h3>
+    
+    <div style="display: flex; gap: 8px; flex-direction: column;">
+      <input
+        type="text"
+        placeholder="Image URL"
+        [(ngModel)]="model.imageUrl"
+      />
+
+      <button class="btn-secondary" (click)="loadImage()">
+        Load Image
+      </button>
+    </div>
+
+    <div class="image-box" *ngIf="model.imageUrl">
+      <img [src]="model.imageUrl" />
+    </div>
+  </div>
+
+</div>

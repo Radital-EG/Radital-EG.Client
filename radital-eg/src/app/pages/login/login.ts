@@ -1,29 +1,37 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// login.ts  –  Login component wired to LoginService
+// ─────────────────────────────────────────────────────────────────────────────
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule }  from '@angular/forms';
+import { LoginService } from './login.service';
 
 @Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  selector:    'app-login',
+  standalone:  true,
+  imports:     [CommonModule, FormsModule],
   templateUrl: './login.html',
-  styleUrls: ['./login.css']
+  styleUrls:   ['./login.css'],
 })
 export class Login {
   @ViewChild('passwordInput') passwordInput!: ElementRef;
 
-  employeeId: string = '';
-  password: string = '';
+  employeeId:   string  = '';
+  password:     string  = '';
   showPassword: boolean = false;
-  idTouched: boolean = false;
-  
-  // Tracks previous valid state to prevent stealing focus repeatedly
-  private wasIdValid: boolean = false;
+  idTouched:    boolean = false;
+
+  isLoading:    boolean = false;
+  errorMessage: string  = '';
+
+  private wasIdValid = false;
+
+  constructor(private loginService: LoginService) {}
+
+  // ── Validation ─────────────────────────────────────────────────────────
 
   get isIdValid(): boolean {
-    // Regex: Starts with RAD or TEC (case-insensitive), followed by exactly 7 digits
-    const idPattern = /^(RAD|TEC)\d{7}$/i;
-    return idPattern.test(this.employeeId);
+    return /^(RAD|TEC)\d{7}$/i.test(this.employeeId);
   }
 
   get showIdError(): boolean {
@@ -31,47 +39,50 @@ export class Login {
   }
 
   get isFormValid(): boolean {
-    return this.isIdValid && this.password.length > 0;
+    return this.isIdValid && this.password.length > 0 && !this.isLoading;
   }
 
+  // ── Handlers ───────────────────────────────────────────────────────────
+
   onIdChange(value: string): void {
-    this.idTouched = true;
-    
-    // Auto-uppercase the input to help the user
+    this.idTouched  = true;
     this.employeeId = value.toUpperCase();
+    this.errorMessage = '';
 
     const currentlyValid = this.isIdValid;
-    
-    // If the ID just transitioned from invalid to valid, focus the password input
     if (currentlyValid && !this.wasIdValid) {
-      setTimeout(() => {
-        this.passwordInput?.nativeElement?.focus();
-      }, 50); // slight delay to allow angular to enable the disabled field first
+      setTimeout(() => this.passwordInput?.nativeElement?.focus(), 50);
     }
-    
     this.wasIdValid = currentlyValid;
   }
 
   togglePassword(): void {
-    if (this.isIdValid) {
-      this.showPassword = !this.showPassword;
-    }
+    if (this.isIdValid) this.showPassword = !this.showPassword;
   }
 
-  onSignIn(): void {
-    if (this.isFormValid) {
-      console.log('Sign in with:', this.employeeId);
-      // TODO: connect to auth service
+  async onSignIn(): Promise<void> {
+    if (!this.isFormValid) return;
+
+    this.isLoading    = true;
+    this.errorMessage = '';
+
+    try {
+      // LoginService stores the token and navigates on success
+      await this.loginService.login(this.employeeId, this.password);
+    } catch (err: unknown) {
+      this.errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+    } finally {
+      this.isLoading = false;
     }
   }
 
   onRequestAccess(): void {
+    // TODO: open registration modal / navigate to registration page
     console.log('Request system access');
-    // TODO: navigate to request access page
   }
 
   onForgotPassword(): void {
+    // TODO: navigate to password-reset page
     console.log('Forgot password');
-    // TODO: navigate to forgot password page
   }
 }

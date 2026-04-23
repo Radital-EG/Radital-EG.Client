@@ -1,92 +1,100 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+// ─────────────────────────────────────────────────────────────────────────────
+// technician-dashboard.ts  –  Updated component wired to TechnicianDashboardService
+// ─────────────────────────────────────────────────────────────────────────────
+import { Component, OnInit } from '@angular/core';
+import { CommonModule }      from '@angular/common';
+import { FormsModule }       from '@angular/forms';
+
+import { TechnicianDashboardService, DashboardStats } from './technician-dashboard.service';
 
 export type RequestStatus = 'PENDING' | 'IN REVIEW' | 'COMPLETED' | 'ESCALATED';
-export type ProgressStep = 'SUBMITTED' | 'PROCESSING' | 'FINALIZING' | 'COMPLETED';
+export type ProgressStep  = 'SUBMITTED' | 'PROCESSING' | 'FINALIZING' | 'COMPLETED';
 
 export interface Request {
-  id: string;
-  patientInitials: string;
-  patientName: string;
-  modality: string;
-  submissionTime: string;
-  status: RequestStatus;
-  expanded: boolean;
-  assignedTo?: string;
-  progress: ProgressStep;
+  id:               string;
+  patientInitials:  string;
+  patientName:      string;
+  modality:         string;
+  submissionTime:   string;
+  status:           RequestStatus;
+  expanded:         boolean;
+  assignedTo?:      string;
+  progress:         ProgressStep;
+  /** Real UUID used for detail-panel API calls — not displayed. */
+  uuid?:            string;
 }
 
 @Component({
-  selector: 'app-technician-dashboard',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  selector:    'app-technician-dashboard',
+  standalone:  true,
+  imports:     [CommonModule, FormsModule],
   templateUrl: './technician-dashboard.html',
-  styleUrls: ['./technician-dashboard.css']
+  styleUrls:   ['./technician-dashboard.css'],
 })
-export class TechnicianDashboardComponent {
-  activeNav: string = 'current-cases';
-  searchQuery: string = '';
-  dateRange: string = 'last24h';
+export class TechnicianDashboardComponent implements OnInit {
+
+  // ── UI state ──────────────────────────────────────────────────────────
+  activeNav:    string = 'current-cases';
+  searchQuery:  string = '';
+  dateRange:    string = 'last24h';
   statusFilter: string = 'all';
 
+  isLoading:    boolean = true;
+  errorMessage: string  = '';
+
   navItems = [
-    { id: 'dashboard',     label: 'Dashboard',     icon: 'grid' },
-    { id: 'current-cases', label: 'Current Cases',  icon: 'list' },
-    { id: 'emergency',     label: 'Emergency',      icon: 'alert' },
-    { id: 'pending-lab',   label: 'Pending Lab',    icon: 'flask' },
-    { id: 'technician-log',label: 'Technician Log', icon: 'user' },
-    { id: 'reports',       label: 'Reports',        icon: 'file' },
+    { id: 'dashboard',      label: 'Dashboard',      icon: 'grid'  },
+    { id: 'current-cases',  label: 'Current Cases',  icon: 'list'  },
+    { id: 'emergency',      label: 'Emergency',      icon: 'alert' },
+    { id: 'pending-lab',    label: 'Pending Lab',    icon: 'flask' },
+    { id: 'technician-log', label: 'Technician Log', icon: 'user'  },
+    { id: 'reports',        label: 'Reports',        icon: 'file'  },
   ];
 
   progressSteps: ProgressStep[] = ['SUBMITTED', 'PROCESSING', 'FINALIZING', 'COMPLETED'];
 
-  allRequests: Request[] = [
-    {
-      id: '#REQ-001',
-      patientInitials: 'HS',
-      patientName: 'Hanna Scholl',
-      modality: 'MRI Lumbar',
-      submissionTime: 'Today, 09:12 AM',
-      status: 'PENDING',
-      expanded: false,
-      progress: 'SUBMITTED'
-    },
-    {
-      id: '#REQ-002',
-      patientInitials: 'MJ',
-      patientName: 'Marcus Jensen',
-      modality: 'CT Chest',
-      submissionTime: 'Today, 08:45 AM',
-      status: 'IN REVIEW',
-      expanded: true,
-      assignedTo: 'Dr. Sarah Miller',
-      progress: 'FINALIZING'
-    },
-    {
-      id: '#REQ-003',
-      patientInitials: 'LW',
-      patientName: 'Linda Wu',
-      modality: 'X-Ray Femur',
-      submissionTime: 'Today, 07:15 AM',
-      status: 'COMPLETED',
-      expanded: false,
-      progress: 'COMPLETED'
-    },
-  ];
+  // ── Data ──────────────────────────────────────────────────────────────
+  allRequests: Request[] = [];
 
-  stats = {
-    avgTurnaround: '42m 15s',
-    avgTrend: '-12% from yesterday',
-    urgentPending: '6',
-    reportsToday: '14',
-    reportsTarget: '15',
-    reportsPercent: 76
+  stats: DashboardStats = {
+    avgTurnaround:  '— m — s',
+    avgTrend:       'N/A',
+    urgentPending:  '0',
+    reportsToday:   '0',
+    reportsTarget:  '15',
+    reportsPercent: 0,
   };
+
+  constructor(private dashboardService: TechnicianDashboardService) {}
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────
+
+  async ngOnInit(): Promise<void> {
+    await this.loadData();
+  }
+
+  async loadData(): Promise<void> {
+    this.isLoading    = true;
+    this.errorMessage = '';
+
+    try {
+      this.allRequests = await this.dashboardService.loadRequests();
+      this.stats       = this.dashboardService.deriveStats(this.allRequests);
+    } catch (err: unknown) {
+      this.errorMessage = err instanceof Error
+        ? err.message
+        : 'Failed to load requests. Please refresh.';
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────
 
   get filteredRequests(): Request[] {
     return this.allRequests.filter(r => {
-      const matchStatus = this.statusFilter === 'all' || r.status.toLowerCase().replace(' ', '') === this.statusFilter;
+      const matchStatus = this.statusFilter === 'all' ||
+        r.status.toLowerCase().replace(' ', '') === this.statusFilter;
       const matchSearch = !this.searchQuery ||
         r.id.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         r.patientName.toLowerCase().includes(this.searchQuery.toLowerCase());
@@ -94,9 +102,28 @@ export class TechnicianDashboardComponent {
     });
   }
 
-  toggleExpand(req: Request): void {
-    req.expanded = !req.expanded;
+  resetFilters(): void {
+    this.dateRange    = 'last24h';
+    this.statusFilter = 'all';
+    this.searchQuery  = '';
   }
+
+  // ── Row expand with optional API refresh ──────────────────────────────
+
+  async toggleExpand(req: Request): Promise<void> {
+    req.expanded = !req.expanded;
+
+    // When expanding, fetch fresh detail data if we have the UUID
+    if (req.expanded && req.uuid) {
+      try {
+        await this.dashboardService.refreshRow(this.allRequests, req.uuid);
+      } catch {
+        // Non-fatal: the row stays expanded with the data we already have
+      }
+    }
+  }
+
+  // ── Progress helpers ──────────────────────────────────────────────────
 
   getStepIndex(step: ProgressStep): number {
     return this.progressSteps.indexOf(step);
@@ -108,11 +135,5 @@ export class TechnicianDashboardComponent {
 
   isStepActive(req: Request, step: ProgressStep): boolean {
     return req.progress === step;
-  }
-
-  resetFilters(): void {
-    this.dateRange = 'last24h';
-    this.statusFilter = 'all';
-    this.searchQuery = '';
   }
 }

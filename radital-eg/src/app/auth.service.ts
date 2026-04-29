@@ -6,20 +6,26 @@ import { LoginResponseDto } from './models';
 
 const TOKEN_KEY = 'radital_token';
 const USER_KEY  = 'radital_user';
+const API_BASE_KEY = 'radital_api_base';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
   // ── Storage helpers ─────────────────────────────────────────────────────
 
-  saveSession(response: LoginResponseDto): void {
+  saveSession(response: LoginResponseDto, apiBase: string): void {
     localStorage.setItem(TOKEN_KEY, response.token);
     localStorage.setItem(USER_KEY,  JSON.stringify(response));
+    localStorage.setItem(API_BASE_KEY, apiBase);         // ← NEW
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   }
+
+  getApiBase(): string {
+  return localStorage.getItem(API_BASE_KEY) ?? 'https://localhost:7026';
+}
 
   getUser(): LoginResponseDto | null {
     const raw = localStorage.getItem(USER_KEY);

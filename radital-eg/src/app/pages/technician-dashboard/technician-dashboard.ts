@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // technician-dashboard.ts  –  Updated component wired to TechnicianDashboardService
 // ─────────────────────────────────────────────────────────────────────────────
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef  } from '@angular/core';
 import { CommonModule }      from '@angular/common';
 import { FormsModule }       from '@angular/forms';
-
+import { Router } from '@angular/router';
 import { TechnicianDashboardService, DashboardStats } from './technician-dashboard.service';
 
 export type RequestStatus = 'PENDING' | 'IN REVIEW' | 'COMPLETED' | 'ESCALATED';
@@ -20,8 +20,22 @@ export interface Request {
   expanded:         boolean;
   assignedTo?:      string;
   progress:         ProgressStep;
+  storageReference: string | null;
   /** Real UUID used for detail-panel API calls — not displayed. */
   uuid?:            string;
+
+  statusLabel:          string;
+  isEmergency:          boolean;
+  priority:             number;
+  priorityLabel:        string;
+  dueDate:              string;          // formatted for display
+  dueDateRaw:           string | null;   // raw ISO for logic/sorting
+
+  patientDateOfBirth:   string | null;
+  patientGender:        number | null;
+  patientAddress:       string | null;
+  patientMedicalHistory: string | null;
+  patientNotes:         string | null;
 }
 
 @Component({
@@ -40,6 +54,8 @@ export class TechnicianDashboardComponent implements OnInit {
   statusFilter: string = 'all';
 
   isLoading:    boolean = true;
+  pdfLoadingId: string | null = null;  // tracks which row is loading the PDF
+
   errorMessage: string  = '';
 
   navItems = [
@@ -60,12 +76,13 @@ export class TechnicianDashboardComponent implements OnInit {
     avgTurnaround:  '— m — s',
     avgTrend:       'N/A',
     urgentPending:  '0',
+    overdueCount:   '0',
     reportsToday:   '0',
     reportsTarget:  '15',
     reportsPercent: 0,
   };
 
-  constructor(private dashboardService: TechnicianDashboardService) {}
+  constructor(private dashboardService: TechnicianDashboardService, private cdr: ChangeDetectorRef, private router: Router) {}
 
   // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -86,6 +103,7 @@ export class TechnicianDashboardComponent implements OnInit {
         : 'Failed to load requests. Please refresh.';
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -122,6 +140,38 @@ export class TechnicianDashboardComponent implements OnInit {
       }
     }
   }
+
+  navigateToImagingRequest(): void {
+  this.router.navigate(['/imaging-request']);
+}
+
+viewImages(req: Request, event: MouseEvent): void {
+  event.stopPropagation();
+  if (!req.storageReference) {
+    this.errorMessage = 'No image available for this request.';
+    this.cdr.detectChanges();
+    return;
+  }
+  window.open(req.storageReference, '_blank');
+}
+
+async viewInterimReport(req: Request, event: MouseEvent): Promise<void> {
+  event.stopPropagation();
+  if (!req.uuid) return;
+
+  this.pdfLoadingId = req.uuid;
+  this.errorMessage = '';
+  this.cdr.detectChanges();
+
+  try {
+    await this.dashboardService.openReportPdf(req.uuid);
+  } catch {
+    this.errorMessage = 'No report available yet for this request.';
+  } finally {
+    this.pdfLoadingId = null;
+    this.cdr.detectChanges();
+  }
+}
 
   // ── Progress helpers ──────────────────────────────────────────────────
 

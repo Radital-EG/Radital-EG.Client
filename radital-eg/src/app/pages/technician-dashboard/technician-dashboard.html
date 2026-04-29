@@ -143,105 +143,147 @@
         </button>
       </div>
 
-      <!-- Table -->
-      <div class="table-wrapper">
-        <!-- Table header -->
-        <div class="table-header">
-          <span>REQUEST ID</span>
-          <span>PATIENT NAME</span>
-          <span>MODALITY</span>
-          <span>SUBMISSION TIME</span>
-          <span>STATUS</span>
-          <span>ACTIONS</span>
+<!-- Table -->
+<div class="table-wrapper">
+  <!-- Table header -->
+  <div class="table-header">
+    <span>REQUEST ID</span>
+    <span>PATIENT NAME</span>
+    <span>MODALITY</span>
+    <span>SUBMISSION TIME</span>
+    <span>STATUS</span>
+    <span>ACTIONS</span>
+  </div>
+
+  <!-- ── Loading skeleton ─────────────────────────────── -->
+  <ng-container *ngIf="isLoading">
+    <div class="table-row skeleton-row" *ngFor="let i of [1,2,3,4,5]">
+      <span class="skeleton skeleton-id"></span>
+      <span class="skeleton-patient-cell">
+        <span class="skeleton skeleton-avatar"></span>
+        <span class="skeleton skeleton-name"></span>
+      </span>
+      <span class="skeleton skeleton-modality"></span>
+      <span class="skeleton skeleton-time"></span>
+      <span class="skeleton skeleton-status"></span>
+      <span class="skeleton skeleton-action"></span>
+    </div>
+  </ng-container>
+
+  <!-- ── Error state ──────────────────────────────────── -->
+  <div *ngIf="!isLoading && errorMessage" class="error-state">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {{ errorMessage }}
+    <button class="retry-btn" (click)="loadData()">Retry</button>
+  </div>
+
+  <!-- ── Rows ─────────────────────────────────────────── -->
+  <ng-container *ngIf="!isLoading && !errorMessage">
+    <div *ngFor="let req of filteredRequests" class="request-block">
+
+      <!-- Main row -->
+      <div class="table-row" [class.expanded]="req.expanded" (click)="toggleExpand(req)">
+        <span class="req-id">{{ req.id }}</span>
+        <span class="patient-cell">
+          <span class="patient-avatar">{{ req.patientInitials }}</span>
+          {{ req.patientName }}
+        </span>
+        <span class="modality-tag">{{ req.modality }}</span>
+        <span class="submission-time">{{ req.submissionTime }}</span>
+        <span class="status-badge" [ngClass]="'status-' + req.status.toLowerCase().replace(' ', '-')">
+          ● {{ req.status }}
+        </span>
+        <span class="action-cell">
+          <button class="more-btn" (click)="$event.stopPropagation()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+            </svg>
+          </button>
+          <svg class="expand-arrow" [class.rotated]="req.expanded" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </div>
+
+      <!-- Expanded detail panel -->
+      <div class="detail-panel" *ngIf="req.expanded">
+        <div class="detail-actions">
+<button class="detail-btn btn-view" (click)="viewImages(req, $event)">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+  </svg>
+  VIEW IMAGES
+</button>
+
+<button 
+  class="detail-btn btn-report" 
+  (click)="viewInterimReport(req, $event)"
+  [disabled]="pdfLoadingId === req.uuid"
+>
+  <!-- Spinner when loading -->
+  <svg *ngIf="pdfLoadingId === req.uuid" 
+    class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" 
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+  </svg>
+  <!-- Normal icon when idle -->
+  <svg *ngIf="pdfLoadingId !== req.uuid"
+    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+  </svg>
+  {{ pdfLoadingId === req.uuid ? 'LOADING...' : 'INTERIM REPORT' }}
+</button>
+          <button class="detail-btn btn-escalate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            ESCALATE STATUS
+          </button>
+          <div class="assigned-block" *ngIf="req.assignedTo">
+            <span class="assigned-label">TECHNICIAN ASSIGNED</span>
+            <span class="assigned-name">{{ req.assignedTo }}</span>
+          </div>
         </div>
 
-        <!-- Rows -->
-        <div *ngFor="let req of filteredRequests" class="request-block">
-
-          <!-- Main row -->
-          <div class="table-row" [class.expanded]="req.expanded" (click)="toggleExpand(req)">
-            <span class="req-id">{{ req.id }}</span>
-            <span class="patient-cell">
-              <span class="patient-avatar">{{ req.patientInitials }}</span>
-              {{ req.patientName }}
-            </span>
-            <span class="modality-tag">{{ req.modality }}</span>
-            <span class="submission-time">{{ req.submissionTime }}</span>
-            <span class="status-badge" [ngClass]="'status-' + req.status.toLowerCase().replace(' ', '-')">
-              ● {{ req.status }}
-            </span>
-            <span class="action-cell">
-              <button class="more-btn" (click)="$event.stopPropagation()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
-                </svg>
-              </button>
-              <svg class="expand-arrow" [class.rotated]="req.expanded" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </span>
+        <!-- Progress bar -->
+        <div class="progress-track">
+          <div class="progress-line">
+            <div class="progress-fill" [style.width]="(getStepIndex(req.progress) / 3 * 100) + '%'"></div>
           </div>
-
-          <!-- Expanded detail panel -->
-          <div class="detail-panel" *ngIf="req.expanded">
-            <div class="detail-actions">
-              <button class="detail-btn btn-view">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <div class="progress-steps">
+            <div
+              *ngFor="let step of progressSteps"
+              class="progress-step"
+              [class.done]="isStepDone(req, step)"
+              [class.active]="isStepActive(req, step)"
+            >
+              <div class="step-dot">
+                <svg *ngIf="isStepDone(req, step) && !isStepActive(req, step)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                VIEW IMAGES
-              </button>
-              <button class="detail-btn btn-report">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
-                </svg>
-                INTERIM REPORT
-              </button>
-              <button class="detail-btn btn-escalate">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                </svg>
-                ESCALATE STATUS
-              </button>
-              <div class="assigned-block" *ngIf="req.assignedTo">
-                <span class="assigned-label">TECHNICIAN ASSIGNED</span>
-                <span class="assigned-name">{{ req.assignedTo }}</span>
+                <div *ngIf="isStepActive(req, step)" class="step-active-dot"></div>
               </div>
-            </div>
-
-            <!-- Progress bar -->
-            <div class="progress-track">
-              <div class="progress-line">
-                <div class="progress-fill" [style.width]="(getStepIndex(req.progress) / 3 * 100) + '%'"></div>
-              </div>
-              <div class="progress-steps">
-                <div
-                  *ngFor="let step of progressSteps"
-                  class="progress-step"
-                  [class.done]="isStepDone(req, step)"
-                  [class.active]="isStepActive(req, step)"
-                >
-                  <div class="step-dot">
-                    <svg *ngIf="isStepDone(req, step) && !isStepActive(req, step)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <div *ngIf="isStepActive(req, step)" class="step-active-dot"></div>
-                  </div>
-                  <span class="step-label">{{ step }}</span>
-                </div>
-              </div>
+              <span class="step-label">{{ step }}</span>
             </div>
           </div>
-
-        </div>
-
-        <!-- Empty -->
-        <div *ngIf="filteredRequests.length === 0" class="empty-state">
-          No requests match your filters.
         </div>
       </div>
 
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="filteredRequests.length === 0" class="empty-state">
+      No requests match your filters.
+    </div>
+  </ng-container>
+
+</div>
       <!-- Stats row -->
       <div class="stats-row">
         <div class="stat-card stat-blue">
@@ -290,7 +332,7 @@
   </div>
 
   <!-- FAB -->
-  <button class="fab">
+  <button class="fab" (click)="navigateToImagingRequest()">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>

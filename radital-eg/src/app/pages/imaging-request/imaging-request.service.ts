@@ -105,7 +105,7 @@ export class ImagingRequestService {
       dueDate:               new Date(form.dueDate).toISOString(),
       assignedRadiologistId: form.assignedRadiologistId,
       isEmergency:           form.isEmergency,
-      emergencyJustification:form.isEmergency ? form.emergencyJustification : null,
+      emergencyJustification: form.isEmergency ? form.emergencyJustification : 'N/A',
     };
 
     return this.requestApi.create(dto);

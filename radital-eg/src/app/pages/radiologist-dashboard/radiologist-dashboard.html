@@ -102,7 +102,14 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">Case list</h1>
-        <p class="page-subtitle">MONITORING {{ filteredCases.length }} ACTIVE DIAGNOSTIC STREAMS</p>
+        <p class="page-subtitle">
+          <ng-container *ngIf="!isLoading">
+            MONITORING {{ filteredCases.length }} ACTIVE DIAGNOSTIC STREAMS
+          </ng-container>
+          <ng-container *ngIf="isLoading">
+            LOADING WORKLOAD...
+          </ng-container>
+        </p>
       </div>
       <div class="view-toggle">
         <button class="toggle-btn" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
@@ -123,56 +130,109 @@
       </div>
     </div>
 
-    <!-- Case cards grid -->
-    <div class="cases-grid" [class.list-view]="viewMode === 'list'">
-      <div
-        *ngFor="let case of filteredCases"
-        class="case-card"
-        [class.stat-card]="case.isStat"
-        [class.critical]="case.action === 'OPEN CRITICAL STUDY'"
-      >
-        <!-- Card top -->
-        <div class="card-top">
-          <div class="modality-icon" [attr.data-modality]="case.modality">
-            {{ getModalityIcon(case.modality) }}
+    <!-- ── Loading skeletons ─────────────────────────────── -->
+    <ng-container *ngIf="isLoading">
+      <div class="cases-grid" [class.list-view]="viewMode === 'list'">
+        <div class="case-card skeleton-card" *ngFor="let i of [1,2,3,4,5]">
+          <div class="card-top">
+            <div class="skeleton skeleton-modality-icon"></div>
+            <div class="card-info">
+              <span class="skeleton skeleton-case-number"></span>
+              <span class="skeleton skeleton-patient-id"></span>
+            </div>
           </div>
-          <div class="card-info">
-            <span class="case-number">{{ case.caseNumber }}</span>
-            <span class="patient-id">{{ case.patientId }}</span>
+          <div class="card-meta">
+            <div class="meta-block">
+              <span class="skeleton skeleton-meta-label"></span>
+              <span class="skeleton skeleton-meta-value"></span>
+            </div>
+            <div class="meta-block">
+              <span class="skeleton skeleton-meta-label"></span>
+              <span class="skeleton skeleton-meta-value"></span>
+            </div>
           </div>
-          <span *ngIf="case.isStat" class="stat-badge">● STAT</span>
+          <div class="skeleton skeleton-action-btn"></div>
         </div>
-
-        <!-- Card meta -->
-        <div class="card-meta">
-          <div class="meta-block">
-            <span class="meta-label">MODALITY</span>
-            <span class="meta-value" [class.modality-mri]="case.modality === 'MRI'" [class.modality-ct]="case.modality === 'CT Scan'" [class.modality-xray]="case.modality === 'X-Ray'">
-              {{ case.modality }}
-            </span>
-          </div>
-          <div class="meta-block">
-            <span class="meta-label">SUBMISSION</span>
-            <span class="meta-value">{{ case.submissionTime }}</span>
-          </div>
-        </div>
-
-        <!-- Card action -->
-        <button
-          class="card-action"
-          [class.action-critical]="case.action === 'OPEN CRITICAL STUDY'"
-          [class.action-review]="case.action === 'REVIEW SERIES'"
-          (click)="openCase(case)"
-        >
-          {{ case.action }}
-        </button>
       </div>
+    </ng-container>
+
+    <!-- ── Error state ───────────────────────────────────── -->
+    <div *ngIf="!isLoading && errorMessage" class="error-state">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ errorMessage }}
+      <button class="retry-btn" (click)="loadData()">Retry</button>
     </div>
 
-    <!-- Empty state -->
-    <div *ngIf="filteredCases.length === 0" class="empty-state">
-      <p>No cases match your current filters.</p>
-    </div>
+    <!-- ── Real case cards ───────────────────────────────── -->
+    <ng-container *ngIf="!isLoading && !errorMessage">
+      <div class="cases-grid" [class.list-view]="viewMode === 'list'">
+        <div
+          *ngFor="let case of filteredCases"
+          class="case-card"
+          [class.stat-card]="case.isStat"
+          [class.critical]="case.action === 'OPEN CRITICAL STUDY'"
+        >
+          <!-- Card top -->
+          <div class="card-top">
+            <div class="modality-icon" [attr.data-modality]="case.modality">
+              {{ getModalityIcon(case.modality) }}
+            </div>
+            <div class="card-info">
+              <span class="case-number">{{ case.caseNumber }}</span>
+              <span class="patient-id">{{ case.patientId }}</span>
+            </div>
+            <span *ngIf="case.isStat" class="stat-badge">● STAT</span>
+            <span *ngIf="case.isEmergency" class="emergency-badge">⚡ EMERGENCY</span>
+          </div>
+
+          <!-- Card meta -->
+          <div class="card-meta">
+            <div class="meta-block">
+              <span class="meta-label">MODALITY</span>
+              <span
+                class="meta-value"
+                [class.modality-mri]="case.modality === 'MRI'"
+                [class.modality-ct]="case.modality === 'CT Scan'"
+                [class.modality-xray]="case.modality === 'X-Ray'"
+              >
+                {{ case.modality }}
+              </span>
+            </div>
+            <div class="meta-block">
+              <span class="meta-label">SUBMISSION</span>
+              <span class="meta-value">{{ case.submissionTime }}</span>
+            </div>
+            <div class="meta-block">
+              <span class="meta-label">STATUS</span>
+              <span class="meta-value">{{ case.statusLabel }}</span>
+            </div>
+            <div class="meta-block">
+              <span class="meta-label">DUE</span>
+              <span class="meta-value">{{ case.dueDate | date:'MMM d, HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Card action -->
+          <button
+            class="card-action"
+            [class.action-critical]="case.action === 'OPEN CRITICAL STUDY'"
+            [class.action-review]="case.action === 'REVIEW SERIES'"
+            (click)="openCase(case)"
+          >
+            {{ case.action }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="filteredCases.length === 0" class="empty-state">
+        <p>No cases match your current filters.</p>
+      </div>
+    </ng-container>
 
   </main>
 </div>
@@ -187,15 +247,13 @@
   <button class="btn-acknowledge" (click)="acknowledgeNotification()">ACKNOWLEDGE</button>
 </div>
 
-<!-- ── Toast Notification ─────────────────────────────── -->
+<!-- ── Toast ──────────────────────────────────────────── -->
 <div class="autosave-toast" [class.toast-success]="toastType === 'success'" *ngIf="toastMessage">
-  <!-- Save icon for autosaved -->
   <svg *ngIf="toastType === 'autosave'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
     <polyline points="17 21 17 13 7 13 7 21"/>
     <polyline points="7 3 7 8 15 8"/>
   </svg>
-  <!-- Checkmark icon for finalized -->
   <svg *ngIf="toastType === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
     <polyline points="22 4 12 14.01 9 11.01"/>

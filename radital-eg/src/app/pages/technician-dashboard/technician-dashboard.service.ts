@@ -1,18 +1,11 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// technician-dashboard.service.ts
-//
-// Sits between TechnicianDashboardComponent and ReportingRequestService.
-// Responsibilities:
-//   • Fetch the full list from the API
-//   • Map API DTOs → the component's local Request shape
-//   • Derive stats (avg turnaround is not yet served by the API, so it stays
-//     as a placeholder until a stats endpoint is added)
-//   • Expose a reload() helper for polling / pull-to-refresh
-// ─────────────────────────────────────────────────────────────────────────────
 import { Injectable } from '@angular/core';
 
-import { ReportingRequestService }  from '../imaging-request/reporting-request.service'; 
-import { ReportingRequestResponseDto, ReportingRequestStatusEnum, ImageModalitiesEnum } from '../../models';
+import { ReportingRequestService }  from '../imaging-request/reporting-request.service';
+import {
+  ReportingRequestResponseDto,
+  ReportingRequestStatusEnum,
+  ImageModalitiesEnum,
+} from '../../models';
 
 import { Request, RequestStatus, ProgressStep } from './technician-dashboard';
 
@@ -39,6 +32,13 @@ const MODALITY_LABEL: Record<ImageModalitiesEnum, string> = {
   [ImageModalitiesEnum.Ultrasound]: 'Ultrasound',
 };
 
+// Priority level → human label (adjust if your enum differs)
+const PRIORITY_LABEL: Record<number, string> = {
+  0: 'Routine',
+  1: 'Urgent',
+  2: 'Critical',
+};
+
 function toInitials(name: string | null): string {
   if (!name) return '??';
   return name
@@ -49,7 +49,8 @@ function toInitials(name: string | null): string {
     .join('');
 }
 
-function formatSubmissionTime(isoString: string): string {
+function formatDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
   const date  = new Date(isoString);
   const today = new Date();
   const isToday =
@@ -61,37 +62,57 @@ function formatSubmissionTime(isoString: string): string {
     hour:   '2-digit',
     minute: '2-digit',
   });
-  return isToday ? `Today, ${timeStr}` : `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${timeStr}`;
+  return isToday
+    ? `Today, ${timeStr}`
+    : `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${timeStr}`;
 }
 
 function dtoToRequest(dto: ReportingRequestResponseDto): Request {
-  const modality     = MODALITY_LABEL[dto.imageModality] ?? 'Unknown';
-  const department   = dto.suggestedDepartment ? ` ${dto.suggestedDepartment}` : '';
+  const modality   = MODALITY_LABEL[dto.imageModality] ?? 'Unknown';
+  const department = dto.suggestedDepartment ? ` ${dto.suggestedDepartment}` : '';
 
   return {
-    id:               `#${dto.id.substring(0, 7).toUpperCase()}`,
-    patientInitials:  toInitials(dto.patientName),
-    patientName:      dto.patientName ?? 'Unknown Patient',
-    modality:         `${modality}${department}`.trim(),
-    submissionTime:   formatSubmissionTime(dto.submissionTime),
-    status:           STATUS_MAP[dto.status] ?? 'PENDING',
-    expanded:         false,
-    assignedTo:       dto.assignedRadiologistName ?? undefined,
-    progress:         PROGRESS_MAP[dto.status]    ?? 'SUBMITTED',
-    // Store the real UUID for detail-panel API calls
-    uuid:             dto.id,
+    // ── Existing fields ──────────────────────────────────────────────────
+    id:              `#${dto.id.substring(0, 7).toUpperCase()}`,
+    uuid:            dto.id,
+    patientInitials: toInitials(dto.patientName),
+    patientName:     dto.patientName ?? 'Unknown Patient',
+    modality:        `${modality}${department}`.trim(),
+    submissionTime:  formatDateTime(dto.submissionTime),
+    status:          STATUS_MAP[dto.status]   ?? 'PENDING',
+    progress:        PROGRESS_MAP[dto.status] ?? 'SUBMITTED',
+    assignedTo:      dto.assignedRadiologistName ?? undefined,
+    expanded:        false,
+
+    // ── New fields from API ──────────────────────────────────────────────
+    statusLabel:     dto.statusLabel ?? STATUS_MAP[dto.status] ?? 'Pending',
+    isEmergency:     dto.isEmergency ?? false,
+    priority:        dto.priority ?? 0,
+    priorityLabel:   PRIORITY_LABEL[dto.priority] ?? 'Routine',
+    dueDate:         formatDateTime(dto.dueDate),
+    dueDateRaw:      dto.dueDate ?? null,   // raw ISO — useful for sorting/overdue checks
+
+    // ── Extended patient info ────────────────────────────────────────────
+    patientDateOfBirth: dto.patientDateOfBirth ?? null,
+    patientGender:      dto.patientGender ?? null,
+    patientAddress:     dto.patientAddress ?? null,
+    patientMedicalHistory: dto.patientMedicalHistory ?? null,
+    patientNotes:       dto.patientNotes ?? null,
+
+    storageReference: dto.storageReference ?? null,
   };
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
-  avgTurnaround:   string;
-  avgTrend:        string;
-  urgentPending:   string;
-  reportsToday:    string;
-  reportsTarget:   string;
-  reportsPercent:  number;
+  avgTurnaround:  string;
+  avgTrend:       string;
+  urgentPending:  string;
+  overdueCount:   string;   // NEW — requests past their dueDate
+  reportsToday:   string;
+  reportsTarget:  string;
+  reportsPercent: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -99,38 +120,34 @@ export class TechnicianDashboardService {
 
   constructor(private requestApi: ReportingRequestService) {}
 
-  /**
-   * Loads all requests from the API and maps them to the component's
-   * Request interface. Throws on network/auth errors.
-   */
   async loadRequests(): Promise<Request[]> {
     const dtos = await this.requestApi.getAll();
     return dtos.map(dtoToRequest);
   }
 
-  /**
-   * Refreshes a single row after the technician expands it.
-   * Merges fresh data into the existing array in-place so the UI doesn't jump.
-   */
   async refreshRow(requests: Request[], uuid: string): Promise<void> {
     const dto = await this.requestApi.getById(uuid);
     const idx = requests.findIndex(r => r.uuid === uuid);
     if (idx === -1) return;
 
-    const updated = dtoToRequest(dto);
-    // Preserve expanded state that the user set locally
-    updated.expanded = requests[idx].expanded;
+    const updated    = dtoToRequest(dto);
+    updated.expanded = requests[idx].expanded;   // preserve local UI state
     requests[idx]    = updated;
   }
 
-  /**
-   * Derives summary stats from the loaded requests array.
-   * avgTurnaround is not yet available from the API, so it stays as a display
-   * placeholder — replace when the backend exposes a stats endpoint.
-   */
   deriveStats(requests: Request[]): DashboardStats {
+    const now = new Date();
+
+    // Urgent = PENDING or ESCALATED status, OR flagged as emergency
     const urgentCount = requests.filter(
-      r => r.status === 'PENDING' || r.status === 'ESCALATED'
+      r => r.status === 'PENDING' || r.status === 'ESCALATED' || r.isEmergency
+    ).length;
+
+    // Overdue = has a dueDate that has already passed and isn't completed
+    const overdueCount = requests.filter(r =>
+      r.dueDateRaw &&
+      new Date(r.dueDateRaw) < now &&
+      r.status !== 'COMPLETED'
     ).length;
 
     const completedToday = requests.filter(
@@ -138,12 +155,17 @@ export class TechnicianDashboardService {
     ).length;
 
     return {
-      avgTurnaround:  '— m — s',         // placeholder: no API endpoint yet
+      avgTurnaround:  '— m — s',   // placeholder until backend exposes a stats endpoint
       avgTrend:       'N/A',
       urgentPending:  String(urgentCount),
+      overdueCount:   String(overdueCount),
       reportsToday:   String(completedToday),
       reportsTarget:  '15',
       reportsPercent: Math.round((completedToday / 15) * 100),
     };
   }
+
+  async openReportPdf(uuid: string): Promise<void> {
+  await this.requestApi.getReportPdf(uuid);
+}
 }

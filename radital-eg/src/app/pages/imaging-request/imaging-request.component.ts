@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // imaging-request.component.ts  –  Updated component wired to ImagingRequestService
 // ─────────────────────────────────────────────────────────────────────────────
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core'; // ← add
 import { CommonModule } from '@angular/common';
 import { FormsModule }  from '@angular/forms';
 
@@ -46,8 +46,9 @@ export class ImagingRequestComponent {
   errorMessage:    string  = '';
   successMessage:  string  = '';
   lastCreated:     ReportingRequestResponseDto | null = null;
+  previewImageUrl: string = '';
 
-  constructor(private imagingRequestService: ImagingRequestService) {}
+  constructor(private imagingRequestService: ImagingRequestService, private cdr: ChangeDetectorRef,) {}
 
   // ── Submit ────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ export class ImagingRequestComponent {
         : 'Submission failed. Please try again.';
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -82,6 +84,7 @@ export class ImagingRequestComponent {
   // ── Reset form ────────────────────────────────────────────────────────
 
   reset(): void {
+      this.previewImageUrl = '';
     this.model = {
       patientName:            '',
       age:                    null,   
@@ -107,10 +110,10 @@ export class ImagingRequestComponent {
   // ── Load image preview ────────────────────────────────────────────────
 
   loadImage(): void {
-    // The template already uses *ngIf="model.imageUrl" to show the <img>.
-    // This method is kept so the button still works — no extra logic needed.
     if (!this.model.imageUrl) {
       this.errorMessage = 'Please enter an image URL first.';
+      return;
     }
+    this.previewImageUrl = this.model.imageUrl;
   }
 }

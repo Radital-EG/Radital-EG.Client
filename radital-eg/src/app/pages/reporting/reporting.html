@@ -1,83 +1,162 @@
 <div class="app-layout">
-  
+
+  <!-- ── Top Navbar ─────────────────────────────────────── -->
   <header class="top-navbar">
     <div class="nav-left">
       <h1 class="logo">Radital Studio</h1>
       <span class="nav-link" (click)="goToCaseList()" style="cursor:pointer;">Case List</span>
       <span class="nav-link active">Worklist</span>
     </div>
-    
     <div class="nav-center">
       <div class="search-bar">
         <span class="search-icon">🔍</span>
         <input type="text" placeholder="Search Patient...">
       </div>
     </div>
-    
     <div class="nav-right">
-      <button class="sign-report-btn">SIGN REPORT</button>
+      <button
+        class="btn-secondary"
+        *ngIf="reportId"
+        (click)="downloadPdf()"
+      >
+        ↓ DOWNLOAD PDF
+      </button>
+      <button
+        class="sign-report-btn"
+        (click)="submitReport()"
+        [disabled]="isSubmitting || isLoading"
+      >
+        {{ isSubmitting ? 'SUBMITTING...' : 'SIGN REPORT' }}
+      </button>
     </div>
   </header>
 
-  <div class="urgent-banner" *ngIf="bannerVisible">
+  <!-- ── Urgent Banner ──────────────────────────────────── -->
+  <div class="urgent-banner" *ngIf="bannerVisible && currentCase?.isEmergency">
     <div class="banner-content">
       <span class="warning-icon">!</span>
-      <span class="banner-text">URGENT: New STAT MRI Assignee - Patient ID #8829</span>
+      <span class="banner-text">
+        URGENT: EMERGENCY CASE — {{ currentCase?.patientName }}
+        <span *ngIf="currentCase?.emergencyJustification">
+          · {{ currentCase?.emergencyJustification }}
+        </span>
+      </span>
     </div>
     <button class="confirm-btn" (click)="confirmReceipt()">CONFIRM RECEIPT</button>
   </div>
 
-  <div class="workspace-container">
-    
+  <!-- ── Error Banner ───────────────────────────────────── -->
+  <div class="error-banner" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- ── Loading ────────────────────────────────────────── -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Loading case...</p>
+  </div>
+
+  <!-- ── Workspace ──────────────────────────────────────── -->
+  <div class="workspace-container" *ngIf="!isLoading && !errorMessage && currentCase">
+
     <div class="viewer-section">
-      
+
+      <!-- Modality sidebar -->
       <div class="modality-sidebar">
-        <div 
-          class="modality-box" 
-          *ngFor="let mod of currentCase.modalities"
+        <div
+          class="modality-box"
+          *ngFor="let mod of modalities"
           [class.active]="selectedModality?.id === mod.id"
-          (click)="selectModality(mod)">
-          <img [src]="mod.imageUrl" alt="{{ mod.series }}" class="modality-thumbnail">
+          (click)="selectModality(mod)"
+        >
+          <img [src]="mod.imageUrl" alt="{{ mod.series }}" class="modality-thumbnail" />
           <span class="modality-label">{{ mod.series }}</span>
         </div>
       </div>
 
+      <!-- Image viewer -->
       <div class="image-container" *ngIf="selectedModality">
         <div class="scan-info-overlay">
           <p>PATIENT: {{ currentCase.patientName }}</p>
           <p>STUDY: {{ selectedModality.description }}</p>
+          <p>DOB: {{ currentCase.patientDateOfBirth | date:'dd MMM yyyy' }}</p>
+          <p>STATUS: {{ currentCase.statusLabel }}</p>
         </div>
         <img [src]="selectedModality.imageUrl" alt="Patient Scan" class="medical-image" />
       </div>
 
     </div>
 
+    <!-- ── Report Section ──────────────────────────────── -->
     <div class="report-section">
       <div class="report-content">
+
         <div class="case-header">
-          <h2>Case #{{ currentCase.caseId }}</h2>
-          <p>DIAGNOSTIC REPORT V1.2</p>
+          <h2>Case #{{ currentCase.id.substring(0, 7).toUpperCase() }}</h2>
+          <p>DIAGNOSTIC REPORT</p>
         </div>
 
+        <!-- Clinical History (pre-filled, editable) -->
         <div class="history-panel">
           <h3 class="section-title">
             <span class="icon">📋</span> CLINICAL HISTORY
           </h3>
-          <div class="panel-content">
-            {{ currentCase.history }}
-          </div>
+          <textarea
+            class="report-textarea report-textarea--sm"
+            [(ngModel)]="report.clinicalHistory"
+            placeholder="Clinical history...">
+          </textarea>
         </div>
 
+        <!-- Technique -->
         <div class="write-report-panel">
           <h3 class="section-title">
-            <span class="icon">👁️</span> FINDINGS & IMPRESSION
+            <span class="icon">⚙️</span> TECHNIQUE
           </h3>
-          <textarea 
-            class="report-textarea" 
-            [(ngModel)]="reportText" 
-            placeholder="Type your findings and impression here..."></textarea>
+          <textarea
+            class="report-textarea report-textarea--sm"
+            [(ngModel)]="report.technique"
+            placeholder="Describe the imaging technique used...">
+          </textarea>
         </div>
 
+        <!-- Findings -->
+        <div class="write-report-panel">
+          <h3 class="section-title">
+            <span class="icon">👁️</span> FINDINGS
+          </h3>
+          <textarea
+            class="report-textarea"
+            [(ngModel)]="report.findings"
+            placeholder="Describe your findings...">
+          </textarea>
+        </div>
+
+        <!-- Impression -->
+        <div class="write-report-panel">
+          <h3 class="section-title">
+            <span class="icon">🧠</span> IMPRESSION
+          </h3>
+          <textarea
+            class="report-textarea"
+            [(ngModel)]="report.impression"
+            placeholder="Your diagnostic impression...">
+          </textarea>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="write-report-panel">
+          <h3 class="section-title">
+            <span class="icon">📝</span> RECOMMENDATION
+          </h3>
+          <textarea
+            class="report-textarea report-textarea--sm"
+            [(ngModel)]="report.recommendation"
+            placeholder="Follow-up or treatment recommendations...">
+          </textarea>
+        </div>
+
+        <!-- Actions -->
         <div class="actions-panel">
           <div class="draft-saved-msg" *ngIf="draftSaved">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -87,9 +166,16 @@
           </div>
           <div class="action-buttons">
             <button class="btn-secondary" (click)="saveDraft()">SAVE DRAFT</button>
-            <button class="btn-primary" (click)="submitReport()">FINALIZE REPORT</button>
+            <button
+              class="btn-primary"
+              (click)="submitReport()"
+              [disabled]="isSubmitting"
+            >
+              {{ isSubmitting ? 'SUBMITTING...' : 'FINALIZE REPORT' }}
+            </button>
           </div>
         </div>
+
       </div>
     </div>
 

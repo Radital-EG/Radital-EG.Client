@@ -1,101 +1,168 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule }  from '@angular/common';
+import { FormsModule }   from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 
-// Define the structure for an individual scan/modality
+import { ReportingService }           from './reporting.service';
+import { WorkloadDto }                from '../radiologist-dashboard/radiologist-dashboard.service';
+
 interface Modality {
-  id: string;
-  series: string;
+  id:          string;
+  series:      string;
   description: string;
-  imageUrl: string;
+  imageUrl:    string;
 }
 
-// Define the structure for the single patient case
-interface PatientCase {
-  caseId: string;
-  patientName: string;
-  history: string;
-  modalities: Modality[];
+// Report form split into the fields the API actually expects
+export interface ReportForm {
+  clinicalHistory: string;
+  technique:       string;
+  findings:        string;
+  impression:      string;
+  recommendation:  string;
 }
 
 @Component({
-  selector: 'app-reporting',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  selector:    'app-reporting',
+  standalone:  true,
+  imports:     [CommonModule, FormsModule],
   templateUrl: './reporting.html',
-  styleUrls: ['./reporting.css']
+  styleUrls:   ['./reporting.css'],
 })
 export class ReportingComponent implements OnInit {
+
+  // ── UI state ────────────────────────────────────────────
   bannerVisible: boolean = true;
-  reportText: string = '';
-  draftSaved: boolean = false;
+  draftSaved:    boolean = false;
+  isLoading:     boolean = true;
+  isSubmitting:  boolean = false;
+  errorMessage:  string  = '';
 
-  constructor(private router: Router) {}
+  // ── Case data ───────────────────────────────────────────
+  caseUuid:        string       = '';
+  reportId:        string | null = null;   // set after first submit
+  currentCase:     WorkloadDto  | null = null;
+  selectedModality: Modality    | null = null;
+  modalities:      Modality[]   = [];
 
-  // The single case assigned to the radiologist
-  currentCase!: PatientCase;
-  
-  // The currently viewed scan
-  selectedModality: Modality | null = null;
+  // ── Report form ─────────────────────────────────────────
+  report: ReportForm = {
+    clinicalHistory: '',
+    technique:       '',
+    findings:        '',
+    impression:      '',
+    recommendation:  '',
+  };
 
-  ngOnInit() {
-    // Initialize the single case with multiple modalities
-    this.currentCase = {
-      caseId: '8824-A',
-      patientName: 'ROE, JONATHAN',
-      history: '64-year-old male with chronic COPD and worsening shortness of breath over the last 48 hours. History of heavy tobacco use (40 pack-years). Previous imaging from 2022 shows mild emphysematous changes.',
-      modalities: [
-        {
-          id: 'm1',
-          series: 'Ser 1',
-          description: 'CHEST CT W/O CONTRAST - AXIAL',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Normal_axial_high-resolution_CT_of_the_lungs.jpg/600px-Normal_axial_high-resolution_CT_of_the_lungs.jpg'
-        },
-        {
-          id: 'm2',
-          series: 'Ser 2',
-          description: 'CHEST X-RAY PA',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg/600px-Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg'
-        },
-        {
-          id: 'm3',
-          series: 'Ser 3',
-          description: 'CHEST CT - CORONAL',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Computed_tomography_of_human_lungs_-_coronal_plane.png/600px-Computed_tomography_of_human_lungs_-_coronal_plane.png'
-        }
-      ]
-    };
+  constructor(
+    private router:   Router,
+    private route:    ActivatedRoute,
+    private service:  ReportingService,
+    private cdr:      ChangeDetectorRef,
+  ) {}
 
-    // Default to the first modality
-    this.selectedModality = this.currentCase.modalities[0];
+  async ngOnInit(): Promise<void> {
+    this.caseUuid = this.route.snapshot.queryParams['id'] ?? '';
+
+    if (!this.caseUuid) {
+      this.errorMessage = 'No case ID provided. Please open a case from the dashboard.';
+      this.isLoading    = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    await this.loadCase();
   }
 
-  confirmReceipt() {
-    this.bannerVisible = false;
+  async loadCase(): Promise<void> {
+    this.isLoading    = true;
+    this.errorMessage = '';
+    try {
+      this.currentCase = await this.service.getCase(this.caseUuid);
+
+      // Pre-fill clinical history from the case
+      this.report.clinicalHistory = this.currentCase.patientMedicalHistory ?? '';
+
+      // Build modalities from the single storageReference the API returns.
+      // When the backend serves multiple images, map them here instead.
+      this.modalities = [
+        {
+          id:          'm1',
+          series:      'Ser 1',
+          description: this.currentCase.suggestedDepartment ?? 'Primary Study',
+          imageUrl:    this.currentCase.storageReference,
+        },
+      ];
+      this.selectedModality = this.modalities[0];
+
+    } catch (err: unknown) {
+      this.errorMessage = err instanceof Error
+        ? err.message
+        : 'Failed to load case. Please go back and try again.';
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    }
   }
 
-  // Handle clicking a different modality box
-  selectModality(modality: Modality) {
+  selectModality(modality: Modality): void {
     this.selectedModality = modality;
   }
 
-  saveDraft() {
+  confirmReceipt(): void {
+    this.bannerVisible = false;
+  }
+
+  saveDraft(): void {
+    // Saves locally for now — wire to a PATCH/draft endpoint when available
     this.draftSaved = true;
     setTimeout(() => { this.draftSaved = false; }, 2500);
+    this.router.navigate(['/radiologist-dashboard'], { queryParams: { autosaved: 'true' } });
   }
 
-  submitReport() {
-    if (!this.reportText.trim()) {
-      alert('Please write a report before finalizing.');
+  async submitReport(): Promise<void> {
+    if (!this.report.findings.trim() || !this.report.impression.trim()) {
+      alert('Please fill in at least Findings and Impression before finalizing.');
       return;
     }
-    // Navigate to dashboard and signal report was finalized
-    this.router.navigate(['/dashboard'], { queryParams: { finalized: 'true' } });
+
+    this.isSubmitting = true;
+    this.errorMessage = '';
+
+    try {
+      const created = await this.service.submitReport({
+        reportingRequestId: this.caseUuid,
+        clinicalHistory:    this.report.clinicalHistory,
+        technique:          this.report.technique,
+        findings:           this.report.findings,
+        impression:         this.report.impression,
+        recommendation:     this.report.recommendation,
+      });
+
+      this.reportId = created.id;
+      this.router.navigate(['/radiologist-dashboard'], { queryParams: { finalized: 'true' } });
+
+    } catch (err: unknown) {
+      this.errorMessage = err instanceof Error
+        ? err.message
+        : 'Submission failed. Please try again.';
+    } finally {
+      this.isSubmitting = false;
+      this.cdr.detectChanges();
+    }
   }
 
-  goToCaseList() {
-    // Navigate back to dashboard and signal that the report was autosaved
-    this.router.navigate(['/dashboard'], { queryParams: { autosaved: 'true' } });
+  async downloadPdf(): Promise<void> {
+    if (!this.reportId) return;
+    try {
+      await this.service.downloadPdf(this.reportId);
+    } catch {
+      this.errorMessage = 'Failed to download PDF.';
+      this.cdr.detectChanges();
+    }
+  }
+
+  goToCaseList(): void {
+    this.router.navigate(['/radiologist-dashboard'], { queryParams: { autosaved: 'true' } });
   }
 }

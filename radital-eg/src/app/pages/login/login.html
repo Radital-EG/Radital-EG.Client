@@ -63,11 +63,7 @@
 
     <a class="forgot-link" (click)="onForgotPassword()">Forgot Password?</a>
 
-    <div class="divider">
-      <span>NEW STAFF</span>
-    </div>
 
-    <button class="btn-request" (click)="onRequestAccess()">REQUEST SYSTEM ACCESS</button>
   </div>
 
   <div class="authorized-badge">
@@ -86,5 +82,31 @@
       <a href="#">HIPAA Compliance</a>
     </nav>
   </footer>
+
+
+  <!-- Forgot Password Modal -->
+  <div class="modal-overlay" *ngIf="showForgotModal" (click)="closeForgotModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2 class="modal-title">Password Recovery</h2>
+      <p class="modal-body">
+        Self-service password recovery is currently under development and will be available in an upcoming release.
+      </p>
+      <p class="modal-body">
+        To regain access to your account, please contact your system administrator or IT support team directly.
+      </p>
+      <div class="modal-contact">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.15 1.18 2 2 0 012.12 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/>
+        </svg>
+        IT Support &nbsp;&middot;&nbsp; Ext. 4357 &nbsp;&middot;&nbsp; itsupport&#64;radital.com
+      </div>
+      <button class="modal-close-btn" (click)="closeForgotModal()">Understood</button>
+    </div>
+  </div>
 
 </div>

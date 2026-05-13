@@ -74,8 +74,17 @@ function dtoToCaseCard(dto: WorkloadDto): CaseCard {
 @Injectable({ providedIn: 'root' })
 export class RadiologistDashboardService {
 
+  /** In-memory cache — lives for the lifetime of the Angular app (single session). */
+  private cache: CaseCard[] | null = null;
+
   constructor(private auth: AuthService) {}
 
+  /** Returns cached data immediately if available, otherwise fetches from API. */
+  getCachedCases(): CaseCard[] | null {
+    return this.cache;
+  }
+
+  /** Fetches fresh data from the API, updates the cache, and returns the result. */
   async loadWorkload(): Promise<CaseCard[]> {
     const response = await fetch(`${this.auth.getApiBase()}/api/workload`, {
       method:  'GET',
@@ -83,7 +92,8 @@ export class RadiologistDashboardService {
     });
     await this.assertOk(response);
     const dtos: WorkloadDto[] = await response.json();
-    return dtos.map(dtoToCaseCard);
+    this.cache = dtos.map(dtoToCaseCard);
+    return this.cache;
   }
 
   async getById(id: string): Promise<CaseCard> {

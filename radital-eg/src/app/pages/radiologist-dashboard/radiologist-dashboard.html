@@ -16,22 +16,6 @@
     </div>
   </div>
   <div class="navbar-right">
-    <button class="icon-btn" aria-label="Notifications">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-    </button>
-    <button class="icon-btn" aria-label="Settings">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-    <button class="icon-btn" aria-label="Profile">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-    </button>
     <div class="avatar">DR</div>
   </div>
 </header>
@@ -57,17 +41,17 @@
         MODALITY
       </p>
       <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="filters.modality.MRI" />
+        <input type="checkbox" [(ngModel)]="filters.modality.MRI" (ngModelChange)="saveFilters()" />
         <span class="checkmark"></span>
         MRI
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="filters.modality.CTScans" />
+        <input type="checkbox" [(ngModel)]="filters.modality.CTScans" (ngModelChange)="saveFilters()" />
         <span class="checkmark"></span>
         CT Scans
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="filters.modality.XRay" />
+        <input type="checkbox" [(ngModel)]="filters.modality.XRay" (ngModelChange)="saveFilters()" />
         <span class="checkmark"></span>
         X-Ray
       </label>
@@ -79,12 +63,12 @@
         <span class="exclaim">!</span>
       </p>
       <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="filters.priority.Urgent" />
+        <input type="checkbox" [(ngModel)]="filters.priority.Urgent" (ngModelChange)="saveFilters()" />
         <span class="checkmark urgent"></span>
         Urgent
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="filters.priority.Standard" />
+        <input type="checkbox" [(ngModel)]="filters.priority.Standard" (ngModelChange)="saveFilters()" />
         <span class="checkmark"></span>
         Standard
       </label>

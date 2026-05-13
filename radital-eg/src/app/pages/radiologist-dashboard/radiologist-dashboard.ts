@@ -47,6 +47,8 @@ export class RadiologistDashboardComponent implements OnInit {
 
   allCases: CaseCard[] = [];
 
+  private readonly FILTERS_STORAGE_KEY = 'radiologist_dashboard_filters';
+
   filters = {
     modality: { MRI: true, CTScans: true, XRay: true },
     priority: { Urgent: true, Standard: true },
@@ -59,7 +61,28 @@ export class RadiologistDashboardComponent implements OnInit {
     private cdr:       ChangeDetectorRef,
   ) {}
 
+  private loadFiltersFromStorage(): void {
+    try {
+      const saved = localStorage.getItem(this.FILTERS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        this.filters = parsed;
+      }
+    } catch {
+      // If parsing fails, keep defaults
+    }
+  }
+
+  saveFilters(): void {
+    try {
+      localStorage.setItem(this.FILTERS_STORAGE_KEY, JSON.stringify(this.filters));
+    } catch {
+      // Storage unavailable — silently ignore
+    }
+  }
+
   async ngOnInit(): Promise<void> {
+    this.loadFiltersFromStorage();
     // Handle toast query params
     this.route.queryParams.subscribe(params => {
       let message = '';
@@ -78,8 +101,23 @@ export class RadiologistDashboardComponent implements OnInit {
   }
 
   async loadData(): Promise<void> {
-    this.isLoading    = true;
     this.errorMessage = '';
+
+    // Serve cached data immediately — no loading spinner on return visits
+    const cached = this.service.getCachedCases();
+    if (cached) {
+      this.allCases  = cached;
+      this.isLoading = false;
+      this.cdr.detectChanges();
+      // Silently refresh in the background to pick up any new cases
+      this.service.loadWorkload()
+        .then(fresh => { this.allCases = fresh; this.cdr.detectChanges(); })
+        .catch(() => { /* background refresh failed — keep showing cached data */ });
+      return;
+    }
+
+    // First load — show skeleton until data arrives
+    this.isLoading = true;
     try {
       this.allCases = await this.service.loadWorkload();
     } catch (err: unknown) {

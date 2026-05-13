@@ -76,13 +76,13 @@ export class Login {
     }
   }
 
-  onRequestAccess(): void {
-    // TODO: open registration modal / navigate to registration page
-    console.log('Request system access');
-  }
+  showForgotModal: boolean = false;
 
   onForgotPassword(): void {
-    // TODO: navigate to password-reset page
-    console.log('Forgot password');
+    this.showForgotModal = true;
+  }
+
+  closeForgotModal(): void {
+    this.showForgotModal = false;
   }
 }

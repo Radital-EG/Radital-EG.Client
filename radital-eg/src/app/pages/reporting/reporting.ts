@@ -6,6 +6,10 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { ReportingService }           from './reporting.service';
 import { WorkloadDto }                from '../radiologist-dashboard/radiologist-dashboard.service';
 
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
 interface Modality {
   id:          string;
   series:      string;
@@ -13,7 +17,6 @@ interface Modality {
   imageUrl:    string;
 }
 
-// Report form split into the fields the API actually expects
 export interface ReportForm {
   clinicalHistory: string;
   technique:       string;
@@ -21,6 +24,278 @@ export interface ReportForm {
   impression:      string;
   recommendation:  string;
 }
+
+type ToolName =
+  | 'select'
+  | 'zoom'
+  | 'pan'
+  | 'wl'
+  | 'ruler'
+  | 'angle'
+  | 'roi-ellipse'
+  | 'roi-rect'
+  | 'roi-free'
+  | 'cobb'
+  | 'probe'
+  | 'arrow'
+  | 'label';
+
+type WLPreset = 'lung' | 'bone' | 'soft' | 'brain' | 'abdomen';
+
+// WL preset definitions  [windowWidth, windowLevel]
+const WL_PRESETS: Record<WLPreset, [number, number]> = {
+  lung:    [-600,  1500],
+  bone:    [400,   1800],
+  soft:    [40,    400 ],
+  brain:   [40,    80  ],
+  abdomen: [60,    400 ],
+};
+
+// ─────────────────────────────────────────────────────────────
+// ViewerState — encapsulates all viewer tool logic
+// ─────────────────────────────────────────────────────────────
+
+export class ViewerState {
+
+  // ── Active tool & preset ──────────────────────────────────
+  activeTool:   ToolName = 'select';
+  activePreset: WLPreset | null = null;
+
+  // ── Transform state ───────────────────────────────────────
+  zoom:      number  = 1;       // scale multiplier
+  panX:      number  = 0;       // translate X in px
+  panY:      number  = 0;       // translate Y in px
+  rotation:  number  = 0;       // degrees
+  flipH:     boolean = false;
+  flipV:     boolean = false;
+  inverted:  boolean = false;
+
+  // ── Window / Level ────────────────────────────────────────
+  windowLevel: number = 40;
+  windowWidth: number = 400;
+
+  // ── UI visibility flags ───────────────────────────────────
+  overlayVisible:    boolean = true;
+  annotationsVisible:boolean = true;
+  referenceLines:    boolean = false;
+
+  // ── Measurement readouts ──────────────────────────────────
+  measurements: string[] = [];
+
+  // ── Internal drag tracking ────────────────────────────────
+  private isDragging = false;
+  private dragStart  = { x: 0, y: 0 };
+  private panStart   = { x: 0, y: 0 };
+  private wlStart    = { wl: 0, ww: 0 };
+
+  // ─────────────────────────────────────────────────────────
+  // Computed styles
+  // ─────────────────────────────────────────────────────────
+
+  get zoomPercent(): number {
+    return Math.round(this.zoom * 100);
+  }
+
+  get transformStyle(): string {
+    const scaleX = this.flipH ? -this.zoom : this.zoom;
+    const scaleY = this.flipV ? -this.zoom : this.zoom;
+    return `translate(${this.panX}px, ${this.panY}px) rotate(${this.rotation}deg) scale(${scaleX}, ${scaleY})`;
+  }
+
+  get filterStyle(): string {
+    if (this.inverted) return 'invert(1)';
+    return 'none';
+  }
+
+  /** CSS cursor class to apply on the image-container */
+  get cursorClass(): string {
+    const map: Record<ToolName, string> = {
+      select:      'cursor-default',
+      zoom:        'cursor-zoom-in',
+      pan:         'cursor-move',
+      wl:          'cursor-crosshair',
+      ruler:       'cursor-crosshair',
+      angle:       'cursor-crosshair',
+      'roi-ellipse':'cursor-crosshair',
+      'roi-rect':  'cursor-crosshair',
+      'roi-free':  'cursor-crosshair',
+      cobb:        'cursor-crosshair',
+      probe:       'cursor-cell',
+      arrow:       'cursor-crosshair',
+      label:       'cursor-crosshair',
+    };
+    return map[this.activeTool] ?? 'cursor-default';
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Tool selection
+  // ─────────────────────────────────────────────────────────
+
+  setTool(tool: ToolName): void {
+    this.activeTool = tool;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Zoom
+  // ─────────────────────────────────────────────────────────
+
+  zoomIn(): void {
+    this.zoom = Math.min(this.zoom * 1.2, 8);
+  }
+
+  zoomOut(): void {
+    this.zoom = Math.max(this.zoom / 1.2, 0.1);
+  }
+
+  fitToView(): void {
+    this.zoom   = 1;
+    this.panX   = 0;
+    this.panY   = 0;
+    this.rotation = 0;
+    this.flipH  = false;
+    this.flipV  = false;
+  }
+
+  resetView(): void {
+    this.fitToView();
+    this.inverted    = false;
+    this.activePreset = null;
+    this.windowLevel = 40;
+    this.windowWidth = 400;
+    this.measurements = [];
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Rotation / flip
+  // ─────────────────────────────────────────────────────────
+
+  rotateCW(): void  { this.rotation = (this.rotation + 90) % 360; }
+  rotateCCW(): void { this.rotation = (this.rotation - 90 + 360) % 360; }
+  flipHorizontal(): void { this.flipH = !this.flipH; }
+  flipVertical():   void { this.flipV = !this.flipV; }
+  toggleInvert():   void { this.inverted = !this.inverted; }
+
+  // ─────────────────────────────────────────────────────────
+  // WL presets
+  // ─────────────────────────────────────────────────────────
+
+  applyPreset(preset: WLPreset): void {
+    if (this.activePreset === preset) {
+      this.activePreset = null;
+      return;
+    }
+    this.activePreset  = preset;
+    this.activeTool    = 'wl';
+    const [level, width] = WL_PRESETS[preset];
+    this.windowLevel   = level;
+    this.windowWidth   = width;
+    // NOTE: In a real DICOM viewer (e.g. Cornerstone.js), apply W/L to the
+    // viewport here. For an <img> fallback we encode it into a CSS filter.
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Annotations
+  // ─────────────────────────────────────────────────────────
+
+  clearAnnotations(): void {
+    this.measurements = [];
+  }
+
+  toggleAnnotations(): void {
+    this.annotationsVisible = !this.annotationsVisible;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Overlay / reference lines
+  // ─────────────────────────────────────────────────────────
+
+  toggleOverlay():        void { this.overlayVisible  = !this.overlayVisible; }
+  toggleReferenceLines(): void { this.referenceLines  = !this.referenceLines; }
+
+  // ─────────────────────────────────────────────────────────
+  // Fullscreen
+  // ─────────────────────────────────────────────────────────
+
+  toggleFullscreen(): void {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Series navigation (stub — wire to modality array externally)
+  // ─────────────────────────────────────────────────────────
+
+  previousSeries(): void { /* delegate to component */ }
+  nextSeries():     void { /* delegate to component */ }
+
+  // ─────────────────────────────────────────────────────────
+  // Mouse event handlers
+  // ─────────────────────────────────────────────────────────
+
+  onMouseDown(event: MouseEvent): void {
+    this.isDragging = true;
+    this.dragStart  = { x: event.clientX, y: event.clientY };
+
+    if (this.activeTool === 'pan') {
+      this.panStart = { x: this.panX, y: this.panY };
+    }
+    if (this.activeTool === 'wl') {
+      this.wlStart = { wl: this.windowLevel, ww: this.windowWidth };
+    }
+  }
+
+  onMouseMove(event: MouseEvent): void {
+    if (!this.isDragging) return;
+
+    const dx = event.clientX - this.dragStart.x;
+    const dy = event.clientY - this.dragStart.y;
+
+    if (this.activeTool === 'pan') {
+      this.panX = this.panStart.x + dx;
+      this.panY = this.panStart.y + dy;
+      return;
+    }
+
+    if (this.activeTool === 'wl') {
+      // Horizontal drag → window width; vertical drag → window level
+      this.windowWidth = Math.max(1, this.wlStart.ww + dx * 4);
+      this.windowLevel = this.wlStart.wl + dy * 2;
+      return;
+    }
+
+    if (this.activeTool === 'zoom') {
+      // Vertical drag to zoom
+      const factor = 1 + dy * 0.005;
+      this.zoom = Math.min(Math.max(this.zoom * factor, 0.1), 8);
+      this.dragStart = { x: event.clientX, y: event.clientY };
+      return;
+    }
+  }
+
+  onMouseUp(_event: MouseEvent): void {
+    if (this.isDragging && this.activeTool === 'ruler') {
+      // Stub: in a real viewer calculate pixel distance and push a measurement
+      const dx = _event.clientX - this.dragStart.x;
+      const dy = _event.clientY - this.dragStart.y;
+      const px = Math.round(Math.sqrt(dx * dx + dy * dy));
+      this.measurements.push(`Ruler: ~${px} px`);
+    }
+    this.isDragging = false;
+  }
+
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? 0.9 : 1.1;
+    this.zoom = Math.min(Math.max(this.zoom * delta, 0.1), 8);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────
 
 @Component({
   selector:    'app-reporting',
@@ -39,11 +314,14 @@ export class ReportingComponent implements OnInit {
   errorMessage:  string  = '';
 
   // ── Case data ───────────────────────────────────────────
-  caseUuid:        string       = '';
-  reportId:        string | null = null;   // set after first submit
-  currentCase:     WorkloadDto  | null = null;
-  selectedModality: Modality    | null = null;
-  modalities:      Modality[]   = [];
+  caseUuid:         string       = '';
+  reportId:         string | null = null;
+  currentCase:      WorkloadDto  | null = null;
+  selectedModality: Modality     | null = null;
+  modalities:       Modality[]   = [];
+
+  // ── Viewer state ────────────────────────────────────────
+  viewer: ViewerState = new ViewerState();
 
   // ── Report form ─────────────────────────────────────────
   report: ReportForm = {
@@ -72,6 +350,7 @@ export class ReportingComponent implements OnInit {
     }
 
     await this.loadCase();
+    this.wireViewerNavigation();
   }
 
   async loadCase(): Promise<void> {
@@ -79,12 +358,8 @@ export class ReportingComponent implements OnInit {
     this.errorMessage = '';
     try {
       this.currentCase = await this.service.getCase(this.caseUuid);
-
-      // Pre-fill clinical history from the case
       this.report.clinicalHistory = this.currentCase.patientMedicalHistory ?? '';
 
-      // Build modalities from the single storageReference the API returns.
-      // When the backend serves multiple images, map them here instead.
       this.modalities = [
         {
           id:          'm1',
@@ -105,8 +380,21 @@ export class ReportingComponent implements OnInit {
     }
   }
 
+  /** Wire viewer navigation stubs to the modalities array */
+  private wireViewerNavigation(): void {
+    this.viewer.previousSeries = () => {
+      const idx = this.modalities.findIndex(m => m.id === this.selectedModality?.id);
+      if (idx > 0) this.selectModality(this.modalities[idx - 1]);
+    };
+    this.viewer.nextSeries = () => {
+      const idx = this.modalities.findIndex(m => m.id === this.selectedModality?.id);
+      if (idx < this.modalities.length - 1) this.selectModality(this.modalities[idx + 1]);
+    };
+  }
+
   selectModality(modality: Modality): void {
     this.selectedModality = modality;
+    this.viewer.fitToView();
   }
 
   confirmReceipt(): void {
@@ -114,7 +402,6 @@ export class ReportingComponent implements OnInit {
   }
 
   saveDraft(): void {
-    // Saves locally for now — wire to a PATCH/draft endpoint when available
     this.draftSaved = true;
     setTimeout(() => { this.draftSaved = false; }, 2500);
     this.router.navigate(['/radiologist-dashboard'], { queryParams: { autosaved: 'true' } });

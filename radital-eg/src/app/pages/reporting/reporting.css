@@ -129,7 +129,164 @@
   flex: 1;
   background-color: #050505;
   display: flex;
+  flex-direction: column;
   position: relative;
+}
+
+/* --- Viewer Toolbar --- */
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #2e2e2e;
+  padding: 0 12px;
+  height: 44px;
+  gap: 2px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #333;
+  margin: 0 6px;
+}
+
+.tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #999;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tool-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.tool-btn:hover {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #3a3a3a;
+}
+
+.tool-btn.active {
+  background-color: #0056b3;
+  color: #ffffff;
+  border-color: #0070e0;
+}
+
+.tool-btn.active:hover {
+  background-color: #0066cc;
+}
+
+/* Tooltip */
+.tool-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  color: #e0e0e0;
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #333;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.tool-btn:hover::after {
+  opacity: 1;
+}
+
+/* Zoom display */
+.zoom-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.zoom-label {
+  color: #666;
+  font-size: 11px;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.zoom-value {
+  color: #aaa;
+  font-size: 12px;
+  font-family: monospace;
+  font-weight: 600;
+  min-width: 42px;
+  text-align: right;
+}
+
+/* Windowing display */
+.wl-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.wl-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+}
+
+.wl-item span {
+  color: #aaa;
+  font-weight: 600;
+}
+
+/* Series info strip */
+.series-info {
+  color: #555;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+/* Viewer body — holds sidebar + image */
+.viewer-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* Modality Sidebar (The clickable boxes) */
@@ -166,7 +323,7 @@
 }
 
 .modality-box.active {
-  border-color: #007bff; /* Highlights the active scan */
+  border-color: #007bff;
 }
 
 .modality-thumbnail {
@@ -197,7 +354,16 @@
   justify-content: center;
   align-items: center;
   position: relative;
+  overflow: hidden;
 }
+
+/* Cursor states based on active tool */
+.image-container.cursor-crosshair { cursor: crosshair; }
+.image-container.cursor-move      { cursor: move; }
+.image-container.cursor-zoom-in   { cursor: zoom-in; }
+.image-container.cursor-zoom-out  { cursor: zoom-out; }
+.image-container.cursor-default   { cursor: default; }
+.image-container.cursor-cell      { cursor: cell; }
 
 .scan-info-overlay {
   position: absolute;
@@ -207,10 +373,42 @@
   font-family: monospace;
   font-size: 12px;
   z-index: 10;
+  pointer-events: none;
 }
 
 .scan-info-overlay p {
   margin: 4px 0;
+}
+
+/* Measurements overlay (bottom-right) */
+.measurements-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  color: #4db8ff;
+  font-family: monospace;
+  font-size: 11px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.measurement-item {
+  background: rgba(0,0,0,0.55);
+  padding: 2px 8px;
+  border-radius: 3px;
+  border-left: 2px solid #4db8ff;
+}
+
+/* Image transform wrapper */
+.image-transform-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.05s;
 }
 
 .medical-image {
@@ -218,6 +416,48 @@
   max-height: 80%;
   object-fit: contain;
   background-color: transparent;
+  user-select: none;
+  -webkit-user-drag: none;
+  display: block;
+}
+
+/* Annotation canvas overlay */
+.annotation-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Preset buttons in toolbar */
+.preset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #888;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.preset-btn:hover {
+  background: #2a2a2a;
+  color: #ccc;
+  border-color: #444;
+}
+
+.preset-btn.active {
+  background: #003580;
+  color: #80c0ff;
+  border-color: #0056b3;
 }
 
 /* --- Right Side: Report Section --- */
@@ -235,6 +475,7 @@
   padding: 24px;
   height: 100%;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .case-header {
@@ -300,6 +541,7 @@
   color: #222;
   box-sizing: border-box;
   font-family: inherit;
+  min-height: 80px;
 }
 
 .report-textarea:focus {

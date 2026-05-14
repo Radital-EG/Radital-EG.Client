@@ -137,7 +137,7 @@ export class ImagingRequestService {
     const priorityStr = Object.keys(PRIORITY_MAP).find(k => PRIORITY_MAP[k] === dto.priority) || 'Routine';
 
     return {
-      patientName:           dto.patientName,
+      patientName:           dto.patientName ?? "",
       patientId:             dto.patientId || '',
       age:                   null, // We don't have age in DTO, it's calculated or ignored
       notes:                 dto.patientNotes || '',

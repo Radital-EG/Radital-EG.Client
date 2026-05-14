@@ -89,8 +89,29 @@ export class ImagingRequestService {
    */
   async submit(form: ImagingRequestFormModel): Promise<ReportingRequestResponseDto> {
     this.validate(form);
+    const dto = this.mapFormToDto(form);
+    return this.requestApi.create(dto);
+  }
 
-    const dto: CreateReportingRequestDto = {
+  /**
+   * Updates an existing request.
+   */
+  async update(id: string, form: ImagingRequestFormModel): Promise<ReportingRequestResponseDto> {
+    this.validate(form);
+    const dto = this.mapFormToDto(form);
+    return this.requestApi.update(id, dto);
+  }
+
+  /**
+   * Fetches a single request and maps it to the form model.
+   */
+  async getById(id: string): Promise<ImagingRequestFormModel> {
+    const dto = await this.requestApi.getById(id);
+    return this.mapDtoToForm(dto);
+  }
+
+  private mapFormToDto(form: ImagingRequestFormModel): CreateReportingRequestDto {
+    return {
       patientName:           form.patientName,
       patientDateOfBirth:    new Date(form.patientDateOfBirth).toISOString(),
       patientPhoneNumber:    form.patientPhoneNumber,
@@ -107,8 +128,34 @@ export class ImagingRequestService {
       isEmergency:           form.isEmergency,
       emergencyJustification: form.isEmergency ? form.emergencyJustification : 'N/A',
     };
+  }
 
-    return this.requestApi.create(dto);
+  private mapDtoToForm(dto: ReportingRequestResponseDto): ImagingRequestFormModel {
+    // Reverse maps
+    const genderStr = Object.keys(GENDER_MAP).find(k => GENDER_MAP[k] === dto.patientGender) || 'Male';
+    const modalityStr = Object.keys(MODALITY_MAP).find(k => MODALITY_MAP[k] === dto.imageModality) || 'CT';
+    const priorityStr = Object.keys(PRIORITY_MAP).find(k => PRIORITY_MAP[k] === dto.priority) || 'Routine';
+
+    return {
+      patientName:           dto.patientName,
+      patientId:             dto.patientId || '',
+      age:                   null, // We don't have age in DTO, it's calculated or ignored
+      notes:                 dto.patientNotes || '',
+      gender:                genderStr,
+      patientDateOfBirth:    dto.patientDateOfBirth ? dto.patientDateOfBirth.split('T')[0] : '',
+      patientPhoneNumber:    dto.patientPhoneNumber || '',
+      patientAddress:        dto.patientAddress || '',
+      patientMedicalHistory: dto.patientMedicalHistory || '',
+      patientNotes:          dto.patientNotes || '',
+      scanType:              modalityStr,
+      imageUrl:              dto.storageReference || '',
+      suggestedDepartment:   dto.suggestedDepartment || '',
+      priority:              priorityStr,
+      dueDate:               dto.dueDate ? dto.dueDate.substring(0, 16) : '', // YYYY-MM-DDTHH:mm
+      assignedRadiologistId: dto.assignedRadiologistId || '',
+      isEmergency:           dto.isEmergency || false,
+      emergencyJustification: dto.emergencyJustification || '',
+    };
   }
 
   // ── Basic client-side validation ────────────────────────────────────────

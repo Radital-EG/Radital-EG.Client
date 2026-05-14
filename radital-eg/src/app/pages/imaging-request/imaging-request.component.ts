@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // imaging-request.component.ts  –  Updated component wired to ImagingRequestService
 // ─────────────────────────────────────────────────────────────────────────────
-import { Component, ChangeDetectorRef } from '@angular/core'; // ← add
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule }  from '@angular/forms';
+import { Router, ActivatedRoute }       from '@angular/router';
 
 import { ImagingRequestService, ImagingRequestFormModel } from './imaging-request.service';
-import { ReportingRequestResponseDto } from '../../models'; 
+import { ReportingRequestResponseDto } from '../../models';
 
 @Component({
   selector:    'app-imaging-request',
@@ -45,10 +46,52 @@ export class ImagingRequestComponent {
   isLoading:       boolean = false;
   errorMessage:    string  = '';
   successMessage:  string  = '';
+  isEditMode:      boolean = false;
+  editingId:       string | null = null;
   lastCreated:     ReportingRequestResponseDto | null = null;
   previewImageUrl: string = '';
 
-  constructor(private imagingRequestService: ImagingRequestService, private cdr: ChangeDetectorRef,) {}
+  /** Today's date as YYYY-MM-DD — used as max for the DOB picker */
+  get today(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  constructor(
+    private imagingRequestService: ImagingRequestService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private route: ActivatedRoute,
+  ) {}
+
+  async ngOnInit(): Promise<void> {
+    const editId = this.route.snapshot.queryParams['edit'];
+    if (editId) {
+      this.isEditMode = true;
+      this.editingId = editId;
+      this.loadEditingData(editId);
+    }
+  }
+
+  async loadEditingData(id: string): Promise<void> {
+    this.isLoading = true;
+    try {
+      this.model = await this.imagingRequestService.getById(id);
+      if (this.model.imageUrl) {
+        this.previewImageUrl = this.model.imageUrl;
+      }
+    } catch (err) {
+      this.errorMessage = 'Failed to load request data for editing.';
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────
+
+  goToDashboard(): void {
+    this.router.navigate(['/technician-dashboard']);
+  }
 
   // ── Submit ────────────────────────────────────────────────────────────
 
@@ -58,9 +101,15 @@ export class ImagingRequestComponent {
     this.successMessage = '';
 
     try {
-      this.lastCreated    = await this.imagingRequestService.submit(this.model);
-      this.successMessage = `Request submitted successfully. ID: ${this.lastCreated.id}`;
-      this.reset();
+      if (this.isEditMode && this.editingId) {
+        await this.imagingRequestService.update(this.editingId, this.model);
+        this.successMessage = `Request updated successfully.`;
+      } else {
+        this.lastCreated    = await this.imagingRequestService.submit(this.model);
+        this.successMessage = `Request submitted successfully. ID: ${this.lastCreated.id}`;
+      }
+      // After success, maybe go back to dashboard after a delay?
+      setTimeout(() => this.goToDashboard(), 2000);
     } catch (err: unknown) {
       this.errorMessage = err instanceof Error
         ? err.message

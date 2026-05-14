@@ -3,6 +3,7 @@ import { CommonModule }  from '@angular/common';
 import { FormsModule }   from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RadiologistDashboardService } from './radiologist-dashboard.service';
+import { AuthService } from '../../auth.service';
 
 export interface CaseCard {
   id:             number;
@@ -41,6 +42,7 @@ export class RadiologistDashboardComponent implements OnInit {
   showNotification: boolean = false;
   toastMessage:     string  = '';
   toastType:        'autosave' | 'success' | '' = '';
+  showSettingsDropdown: boolean = false;
 
   isLoading:    boolean = true;
   errorMessage: string  = '';
@@ -59,7 +61,17 @@ export class RadiologistDashboardComponent implements OnInit {
     private router:    Router,
     private service:   RadiologistDashboardService,
     private cdr:       ChangeDetectorRef,
+    private authService: AuthService,
   ) {}
+
+  toggleSettings(): void {
+    this.showSettingsDropdown = !this.showSettingsDropdown;
+  }
+
+  signOut(): void {
+    this.authService.clearSession();
+    this.router.navigate(['/login']);
+  }
 
   private loadFiltersFromStorage(): void {
     try {

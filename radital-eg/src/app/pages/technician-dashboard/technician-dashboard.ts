@@ -6,6 +6,7 @@ import { CommonModule }      from '@angular/common';
 import { FormsModule }       from '@angular/forms';
 import { Router } from '@angular/router';
 import { TechnicianDashboardService, DashboardStats } from './technician-dashboard.service';
+import { AuthService } from '../../auth.service';
 
 export type RequestStatus = 'PENDING' | 'IN REVIEW' | 'COMPLETED' | 'ESCALATED';
 export type ProgressStep  = 'SUBMITTED' | 'PROCESSING' | 'FINALIZING' | 'COMPLETED';
@@ -30,6 +31,7 @@ export interface Request {
   priorityLabel:        string;
   dueDate:              string;          // formatted for display
   dueDateRaw:           string | null;   // raw ISO for logic/sorting
+  submissionTimeRaw:    string | null;   // raw ISO for date-range filtering
 
   patientDateOfBirth:   string | null;
   patientGender:        number | null;
@@ -55,15 +57,14 @@ export class TechnicianDashboardComponent implements OnInit {
 
   isLoading:    boolean = true;
   pdfLoadingId: string | null = null;  // tracks which row is loading the PDF
+  showSettingsDropdown: boolean = false;
+  openActionMenuId: string | null = null;
 
   errorMessage: string  = '';
 
   navItems = [
     { id: 'dashboard',      label: 'Dashboard',      icon: 'grid'  },
-    { id: 'current-cases',  label: 'Current Cases',  icon: 'list'  },
     { id: 'emergency',      label: 'Emergency',      icon: 'alert' },
-    { id: 'pending-lab',    label: 'Pending Lab',    icon: 'flask' },
-    { id: 'technician-log', label: 'Technician Log', icon: 'user'  },
     { id: 'reports',        label: 'Reports',        icon: 'file'  },
   ];
 
@@ -82,12 +83,23 @@ export class TechnicianDashboardComponent implements OnInit {
     reportsPercent: 0,
   };
 
-  constructor(private dashboardService: TechnicianDashboardService, private cdr: ChangeDetectorRef, private router: Router) {}
+  constructor(private dashboardService: TechnicianDashboardService, private cdr: ChangeDetectorRef, private router: Router, private authService: AuthService) {}
+
+  // ── Sign out ──────────────────────────────────────────────────────
+
+  signOut(): void {
+    this.authService.clearSession();
+    this.router.navigate(['/login']);
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────
 
   async ngOnInit(): Promise<void> {
     await this.loadData();
+  }
+
+  toggleSettings(): void {
+    this.showSettingsDropdown = !this.showSettingsDropdown;
   }
 
   async loadData(): Promise<void> {
@@ -110,13 +122,31 @@ export class TechnicianDashboardComponent implements OnInit {
   // ── Filtering ─────────────────────────────────────────────────────────
 
   get filteredRequests(): Request[] {
+    const now = new Date();
+    const cutoffMs: Record<string, number> = {
+      last24h:  24 * 60 * 60 * 1000,
+      last7d:   7  * 24 * 60 * 60 * 1000,
+      last30d:  30 * 24 * 60 * 60 * 1000,
+    };
+
     return this.allRequests.filter(r => {
+      // ── Date-range filter ────────────────────────────────────────────────
+      const matchDate = (() => {
+        const ms = cutoffMs[this.dateRange];
+        if (!ms || !r.submissionTimeRaw) return true;   // unknown range → show all
+        return (now.getTime() - new Date(r.submissionTimeRaw).getTime()) <= ms;
+      })();
+
+      // ── Status filter ────────────────────────────────────────────────────
       const matchStatus = this.statusFilter === 'all' ||
         r.status.toLowerCase().replace(' ', '') === this.statusFilter;
+
+      // ── Search filter ────────────────────────────────────────────────────
       const matchSearch = !this.searchQuery ||
         r.id.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         r.patientName.toLowerCase().includes(this.searchQuery.toLowerCase());
-      return matchStatus && matchSearch;
+
+      return matchDate && matchStatus && matchSearch;
     });
   }
 
@@ -169,6 +199,28 @@ async viewInterimReport(req: Request, event: MouseEvent): Promise<void> {
     this.errorMessage = 'No report available yet for this request.';
   } finally {
     this.pdfLoadingId = null;
+    this.cdr.detectChanges();
+  }
+}
+
+toggleActionMenu(event: MouseEvent, reqId: string): void {
+  event.stopPropagation();
+  this.openActionMenuId = (this.openActionMenuId === reqId) ? null : reqId;
+}
+
+editRequest(req: Request, event: MouseEvent): void {
+  event.stopPropagation();
+  this.openActionMenuId = null;
+  // Navigate to imaging-request page (can be extended to pass ID for editing)
+  this.router.navigate(['/imaging-request'], { queryParams: { edit: req.id } });
+}
+
+deleteRequest(req: Request, event: MouseEvent): void {
+  event.stopPropagation();
+  this.openActionMenuId = null;
+  if (confirm(`Are you sure you want to delete request ${req.id}?`)) {
+    // Locally remove from the list so the user sees immediate feedback
+    this.allRequests = this.allRequests.filter(r => r.id !== req.id);
     this.cdr.detectChanges();
   }
 }

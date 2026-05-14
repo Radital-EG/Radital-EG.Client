@@ -4,15 +4,13 @@
   <header class="top-navbar">
     <h1 class="logo">RADITAL STUDIO</h1>
     <div class="nav-actions">
-      <button class="btn-secondary">Dashboard</button>
-      <button class="btn-secondary">Requests</button>
+      <button class="btn-secondary" (click)="goToDashboard()">Dashboard</button>
     </div>
     <div class="top-buttons">
       <!-- Top bar buttons -->
       <button class="btn-danger"   (click)="deleteRequest()">Delete</button>
-      <button class="btn-secondary">Save Draft</button>
       <button class="btn-primary"  (click)="submitRequest()" [disabled]="isLoading">
-        {{ isLoading ? 'Submitting...' : 'Submit Request' }}
+        {{ isLoading ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Request' : 'Submit Request') }}
       </button>
     </div>
   </header>
@@ -26,7 +24,7 @@
 
     <!-- LEFT — Patient & Clinical Info -->
     <div class="form-section">
-      <h2 class="title">New Imaging Request</h2>
+      <h2 class="title">{{ isEditMode ? 'Edit Imaging Request' : 'New Imaging Request' }}</h2>
 
       <!-- Patient Info -->
       <div class="form-card">
@@ -36,7 +34,7 @@
         <input [(ngModel)]="model.patientName" placeholder="Full name" />
 
         <label>Date of Birth *</label>
-        <input type="date" [(ngModel)]="model.patientDateOfBirth" />
+        <input type="date" [(ngModel)]="model.patientDateOfBirth" [max]="today" />
 
         <label>Gender *</label>
         <select [(ngModel)]="model.gender">
@@ -72,7 +70,16 @@
         </select>
 
         <label>Suggested Department *</label>
-        <input [(ngModel)]="model.suggestedDepartment" placeholder="e.g. Neurology, Oncology" />
+        <select [(ngModel)]="model.suggestedDepartment">
+          <option value="">Select</option>
+          <option>Neurology</option>
+          <option>Oncology</option>
+          <option>Orthopedics</option>
+          <option>Chest</option>
+          <option>Cardiology</option>
+          <option>Emergency</option>
+          <option>Other</option>
+        </select>
 
         <label>Priority *</label>
         <select [(ngModel)]="model.priority">

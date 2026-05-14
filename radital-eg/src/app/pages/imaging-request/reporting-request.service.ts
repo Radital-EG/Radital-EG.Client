@@ -70,6 +70,27 @@ export class ReportingRequestService {
     return response.json() as Promise<ReportingRequestResponseDto>;
   }
 
+  // ── PUT (update) ────────────────────────────────────────────────────────
+  
+  /**
+   * Updates an existing imaging request.
+   */
+  async update(id: string, dto: CreateReportingRequestDto): Promise<ReportingRequestResponseDto> {
+    const response = await fetch(`${this.auth.getApiBase()}/api/ReportingRequests/${id}`, {
+      method:  'PUT',
+      headers: this.auth.authHeaders(),
+      body:    JSON.stringify(dto),
+    });
+
+    await this.assertOk(response, [200, 204]);
+    // The API might return the updated object or just 204.
+    if (response.status === 204) {
+      // If 204, we don't have a body to parse.
+      return {} as ReportingRequestResponseDto; 
+    }
+    return response.json() as Promise<ReportingRequestResponseDto>;
+  }
+
 async getReportPdf(id: string): Promise<void> {
   const newTab = window.open('', '_blank');
   if (!newTab) {

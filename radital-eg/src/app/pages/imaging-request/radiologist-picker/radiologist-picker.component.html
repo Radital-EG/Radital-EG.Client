@@ -16,7 +16,6 @@
     <div class="picker-actions">
   <button class="toggle-manual" (click)="showManual = !showManual" type="button">
     {{ showManual ? 'Smart Picker' : 'Manual ID' }}
-
   </button>
       <button class="btn-refresh" (click)="loadScores()" [disabled]="!requestId || isLoading" type="button"
               title="Reload match scores">

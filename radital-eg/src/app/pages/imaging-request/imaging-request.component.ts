@@ -8,11 +8,13 @@ import { Router, ActivatedRoute }       from '@angular/router';
 
 import { ImagingRequestService, ImagingRequestFormModel } from './imaging-request.service';
 import { ReportingRequestResponseDto } from '../../models';
+import { RadiologistPickerComponent } from './radiologist-picker/radiologist-picker.component';
+
 
 @Component({
   selector:    'app-imaging-request',
   standalone:  true,
-  imports:     [CommonModule, FormsModule],
+  imports:     [CommonModule, FormsModule, RadiologistPickerComponent],
   templateUrl: './imaging-request.component.html',
   styleUrls:   ['./imaging-request.component.css'],
 })

@@ -93,8 +93,11 @@
         <label>Due Date *</label>
         <input type="datetime-local" [(ngModel)]="model.dueDate" />
 
-        <label>Assigned Radiologist ID *</label>
-        <input [(ngModel)]="model.assignedRadiologistId" placeholder="Radiologist UUID" />
+        <label>Assigned Radiologist *</label>
+        <app-radiologist-picker
+          [requestId]="lastCreated?.id ?? editingId"
+          [(selectedId)]="model.assignedRadiologistId">
+        </app-radiologist-picker>
 
         <label>Clinical Notes</label>
         <textarea [(ngModel)]="model.notes" placeholder="Reason for scan, clinical findings..."></textarea>

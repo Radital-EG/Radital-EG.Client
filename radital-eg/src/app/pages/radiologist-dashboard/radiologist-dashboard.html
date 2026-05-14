@@ -240,15 +240,24 @@
 </div>
 
 <!-- ── Notification Bar ────────────────────────────────── -->
-<div class="notification-bar" *ngIf="showNotification">
-  <div class="notif-icon">!</div>
+<!-- ── Emergency Notification Bar ─────────────────────── -->
+<div class="notification-bar emergency-bar" *ngIf="showNotification && activeEmergency">
+  <div class="notif-icon emergency-icon">⚡</div>
   <div class="notif-text">
-    <strong>New urgent MRI case received</strong>
-    <span>PATIENT ID: #1042 • TRAUMA CENTER • INCOMING</span>
+    <strong>EMERGENCY: {{ activeEmergency.patientName }}</strong>
+    <span>
+      {{ activeEmergency.modality }} •
+      {{ activeEmergency.emergencyJustification }} •
+      <span [class.urgent-timer]="emergencySecondsLeft < 60">
+        {{ emergencySecondsLeft }}s to accept
+      </span>
+    </span>
   </div>
-  <button class="btn-acknowledge" (click)="acknowledgeNotification()">ACKNOWLEDGE</button>
+  <button class="btn-acknowledge btn-accept-emergency" (click)="acceptEmergency()">
+    ✔ ACCEPT
+  </button>
+  <button class="btn-dismiss" (click)="acknowledgeNotification()">✕</button>
 </div>
-
 <!-- ── Toast ──────────────────────────────────────────── -->
 <div class="autosave-toast" [class.toast-success]="toastType === 'success'" *ngIf="toastMessage">
   <svg *ngIf="toastType === 'autosave'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

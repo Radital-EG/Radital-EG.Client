@@ -4,6 +4,8 @@ import { FormsModule }   from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RadiologistDashboardService } from './radiologist-dashboard.service';
 import { AuthService } from '../../auth.service';
+import { RealtimeService, EmergencyNotification } from './realtime.service';
+import { Subscription } from 'rxjs';
 
 export interface CaseCard {
   id:             number;
@@ -49,6 +51,11 @@ export class RadiologistDashboardComponent implements OnInit {
 
   allCases: CaseCard[] = [];
 
+  activeEmergency: EmergencyNotification | null = null;
+  emergencySecondsLeft = 300;
+  private emergencyTimer: any = null;
+  private emergencySub?: Subscription;
+
   private readonly FILTERS_STORAGE_KEY = 'radiologist_dashboard_filters';
 
   filters = {
@@ -62,6 +69,7 @@ export class RadiologistDashboardComponent implements OnInit {
     private service:   RadiologistDashboardService,
     private cdr:       ChangeDetectorRef,
     private authService: AuthService,
+    private realtime:  RealtimeService,   // ← add this
   ) {}
 
   toggleSettings(): void {
@@ -109,8 +117,60 @@ export class RadiologistDashboardComponent implements OnInit {
       }
     });
 
-    await this.loadData();
+      // ── Connect SignalR FIRST before anything else ──
+  await this.realtime.connect();
+  this.emergencySub = this.realtime.emergency$.subscribe(notification => {
+    this.activeEmergency  = notification;
+    this.showNotification = true;
+    this.startEmergencyCountdown(notification.deadlineUtc);
+    this.service.loadWorkload()
+      .then(fresh => { this.allCases = fresh; this.cdr.detectChanges(); });
+    this.cdr.detectChanges();
+  });
+
+  // ── THEN load data ──
+  this.route.queryParams.subscribe(params => { /* existing toast logic */ });
+  await this.loadData();
+
   }
+
+
+  private startEmergencyCountdown(deadlineUtc: string): void {
+  clearInterval(this.emergencyTimer);
+  this.emergencyTimer = setInterval(() => {
+    this.emergencySecondsLeft = Math.max(
+      0,
+      Math.floor((new Date(deadlineUtc).getTime() - Date.now()) / 1000)
+    );
+    if (this.emergencySecondsLeft === 0) {
+      clearInterval(this.emergencyTimer);
+      this.showNotification = false;   // backend will escalate; just hide
+      this.activeEmergency  = null;
+    }
+    this.cdr.detectChanges();
+  }, 1000);
+}
+
+async acceptEmergency(): Promise<void> {
+  if (!this.activeEmergency) return;
+  const requestId = this.activeEmergency.requestId; // ← capture before nulling
+  try {
+    const response = await fetch(
+      `${this.authService.getApiBase()}/api/workload/${requestId}/accept`,
+      { method: 'POST', headers: this.authService.authHeaders() }
+    );
+    if (response.ok) {
+      clearInterval(this.emergencyTimer);
+      this.showNotification = false;
+      this.activeEmergency  = null;
+      this.allCases = await this.service.loadWorkload();
+      this.cdr.detectChanges();
+      this.router.navigate(['/reporting'], { queryParams: { id: requestId } });
+    }
+  } catch (err) {
+    console.error('Failed to accept emergency', err);
+  }
+}
 
   async loadData(): Promise<void> {
     this.errorMessage = '';
@@ -174,7 +234,11 @@ export class RadiologistDashboardComponent implements OnInit {
     }
   }
 
-  acknowledgeNotification(): void { this.showNotification = false; }
+  acknowledgeNotification(): void {
+  this.showNotification = false;
+  this.activeEmergency  = null;
+  clearInterval(this.emergencyTimer);
+}
 
   openCase(c: CaseCard): void {
     this.router.navigate(['/reporting'], { queryParams: { id: c.uuid } });
@@ -183,4 +247,9 @@ export class RadiologistDashboardComponent implements OnInit {
   goToWorklist(): void {
     this.router.navigate(['/reporting']);
   }
+
+  ngOnDestroy(): void {
+  this.emergencySub?.unsubscribe();
+  clearInterval(this.emergencyTimer);
+}
 }

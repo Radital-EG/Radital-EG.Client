@@ -27,6 +27,10 @@ export class AuthService {
   return localStorage.getItem(API_BASE_KEY) ?? 'https://localhost:7026';
 }
 
+getRadiologistApiBase(): string {
+  return 'https://localhost:7168'; // RadiologistAPI port
+}
+
   getUser(): LoginResponseDto | null {
     const raw = localStorage.getItem(USER_KEY);
     return raw ? (JSON.parse(raw) as LoginResponseDto) : null;
@@ -39,6 +43,10 @@ export class AuthService {
   clearSession(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+  }
+
+  getUserId(): string {
+    return this.getUser()?.staffId ?? '';
   }
 
   // ── Header helper (used by every service) ───────────────────────────────

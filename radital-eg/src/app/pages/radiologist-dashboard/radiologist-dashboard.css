@@ -683,3 +683,38 @@
   background: #f3f4f6;
   color: #1a1a2e;
 }
+
+.emergency-bar {
+  background: #7f1d1d;
+  border-top: 2px solid #ef4444;
+  animation: pulse-bar 1s infinite alternate;
+}
+
+@keyframes pulse-bar {
+  from { opacity: 1; }
+  to   { opacity: 0.88; }
+}
+
+.urgent-timer {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+.btn-accept-emergency {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.btn-dismiss {
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
